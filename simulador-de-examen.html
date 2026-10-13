@@ -1,0 +1,1511 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Simulador de Examen</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Newsreader:opsz,wght@6..72,500;6..72,600&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: una columna centrada tipo "hoja de examen"; tarjetas solo donde separan objetos reales. */
+:root{
+  --bg:#F3F5F4; --surface:#FFFFFF; --fg:#16201C; --muted:#5B6964; --line:#D8E0DC;
+  --accent:#1C6A56; --accent-ink:#FFFFFF; --accent-soft:#E2EEE9;
+  --good:#1E7A47; --good-soft:#E3F3E9; --bad:#B0362D; --bad-soft:#F9E6E3; --warn:#9A6A12; --warn-soft:#FBF1DC;
+  --f-display:"Newsreader", Georgia, "Times New Roman", serif;
+  --f-body:"Public Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --f-mono:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+  --r:12px; color-scheme:light;
+}
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]){
+  --bg:#0E1412; --surface:#161F1C; --fg:#E4EBE8; --muted:#94A49E; --line:#2A3632;
+  --accent:#5BC3A0; --accent-ink:#0C1512; --accent-soft:#1B2F28;
+  --good:#5CC98C; --good-soft:#15291E; --bad:#F07C70; --bad-soft:#2E1A18; --warn:#E0B456; --warn-soft:#2C2412;
+  color-scheme:dark; } }
+:root[data-theme="dark"]{
+  --bg:#0E1412; --surface:#161F1C; --fg:#E4EBE8; --muted:#94A49E; --line:#2A3632;
+  --accent:#5BC3A0; --accent-ink:#0C1512; --accent-soft:#1B2F28;
+  --good:#5CC98C; --good-soft:#15291E; --bad:#F07C70; --bad-soft:#2E1A18; --warn:#E0B456; --warn-soft:#2C2412;
+  color-scheme:dark; }
+
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--fg);font-family:var(--f-body);font-size:16px;line-height:1.55}
+[hidden]{display:none!important}
+.wrap{max-width:780px;margin:0 auto;padding-inline:16px;padding-block:0 64px}
+button,input,select,textarea{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+a{color:var(--accent)}
+
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--bg);border-bottom:1px solid var(--line)}
+.top .in{max-width:780px;margin:0 auto;padding:10px 16px;display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.brand{font-family:var(--f-display);font-weight:600;font-size:19px;margin-right:auto;background:none;border:0;padding:0;cursor:pointer}
+.nav{display:flex;gap:4px;flex-wrap:wrap}
+.nav button{background:none;border:0;padding:6px 10px;border-radius:8px;font-size:14px;color:var(--muted);cursor:pointer}
+.nav button:hover{color:var(--fg);background:var(--accent-soft)}
+.nav button.on{color:var(--accent);font-weight:600}
+
+.eyebrow{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted)}
+h1{font-family:var(--f-display);font-weight:600;font-size:clamp(32px,6.5vw,46px);line-height:1.08;margin:6px 0 4px;text-wrap:balance;letter-spacing:-.01em}
+h1 small{display:block;font-size:.55em;font-weight:500;color:var(--accent);margin-top:6px}
+h2{font-family:var(--f-display);font-weight:600;font-size:25px;line-height:1.2;margin:0;text-wrap:balance}
+h3{font-size:16px;font-weight:700;margin:0}
+p{margin:0}
+.muted{color:var(--muted)} .small{font-size:14px} .num{font-variant-numeric:tabular-nums}
+.hero{padding-block:30px 18px;display:flex;flex-direction:column;gap:6px}
+.hero p{color:var(--muted);max-width:62ch}
+
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:20px;min-width:0}
+.stack{display:flex;flex-direction:column;gap:16px}
+.stack-s{display:flex;flex-direction:column;gap:8px}
+.row{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.grid2{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:620px){.grid2{grid-template-columns:1fr}}
+
+/* botones */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:10px;padding:12px 18px;font-weight:600;font-size:15px;border:1px solid var(--line);background:var(--surface);cursor:pointer;min-height:46px;text-align:center}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.btn.primary:hover{filter:brightness(1.07)}
+.btn:disabled{opacity:.45;cursor:not-allowed;filter:none}
+.btn.ghost{background:none;border-color:transparent;color:var(--muted)}
+.btn.ghost:hover{color:var(--fg)}
+.btn.danger{color:var(--bad)}
+.btn.sm{min-height:36px;padding:7px 12px;font-size:14px}
+.link{background:none;border:0;padding:0;color:var(--accent);font-weight:600;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+
+/* formulario */
+label.f{display:flex;flex-direction:column;gap:6px;font-size:14px;font-weight:600}
+label.f span.h{font-weight:400;color:var(--muted);font-size:13px}
+input[type=text],input[type=password],input[type=number],select,textarea{width:100%;background:var(--bg);border:1px solid var(--line);border-radius:10px;padding:10px 12px;font-size:15px;font-weight:400;min-width:0}
+textarea{resize:vertical;min-height:110px;line-height:1.45}
+input:focus,select:focus,textarea:focus{outline:2px solid var(--accent);outline-offset:0;border-color:transparent}
+.drop{border:2px dashed var(--line);border-radius:var(--r);padding:20px;text-align:center;display:flex;flex-direction:column;gap:8px;align-items:center;background:var(--bg);cursor:pointer}
+.drop:hover,.drop.over{border-color:var(--accent);background:var(--accent-soft)}
+.drop input{display:none}
+.files{display:flex;flex-direction:column;gap:6px;width:100%;text-align:left}
+.file{display:flex;gap:10px;align-items:center;font-size:14px;padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:var(--surface)}
+.file b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1}
+
+/* elegir método */
+.ways{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:12px}
+@media (max-width:620px){.ways{grid-template-columns:1fr}}
+.way{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;cursor:pointer;display:flex;flex-direction:column;gap:6px;transition:border-color .15s,transform .15s}
+.way:hover{border-color:var(--accent);transform:translateY(-1px)}
+.way .n{font-family:var(--f-mono);font-size:12px;color:var(--accent);letter-spacing:.06em}
+.way b{font-size:17px}
+.way .d{font-size:14px;color:var(--muted)}
+.chips{display:flex;gap:6px;flex-wrap:wrap}
+.chip{font-size:12px;padding:3px 9px;border-radius:99px;border:1px solid var(--line);color:var(--muted);white-space:nowrap}
+.chip.g{border-color:var(--good);color:var(--good)} .chip.w{border-color:var(--warn);color:var(--warn)} .chip.b{border-color:var(--bad);color:var(--bad)}
+
+/* bancos */
+.banks{display:flex;flex-direction:column;gap:12px}
+.bank{display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+.bank .t{flex:1;min-width:200px;display:flex;flex-direction:column;gap:4px}
+.bank .t b{font-family:var(--f-display);font-size:21px;font-weight:600;line-height:1.2}
+
+/* pasos */
+.steps{display:flex;flex-direction:column;gap:14px;counter-reset:st}
+.step{display:grid;grid-template-columns:36px 1fr;gap:12px;align-items:start}
+.step::before{counter-increment:st;content:counter(st);width:32px;height:32px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-mono);font-size:14px;background:var(--accent-soft);color:var(--accent);font-weight:600}
+.step>div{min-width:0;display:flex;flex-direction:column;gap:8px}
+.note{border-radius:10px;padding:12px 14px;font-size:14.5px;border:1px solid var(--line);background:var(--bg)}
+.note.w{background:var(--warn-soft);border-color:var(--warn)}
+.note.g{background:var(--good-soft);border-color:var(--good)}
+.note.b{background:var(--bad-soft);border-color:var(--bad)}
+.note ul{margin:6px 0 0;padding-left:20px} .note li{margin:2px 0}
+.code{font-family:var(--f-mono);font-size:13px;background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 12px;white-space:pre-wrap;word-break:break-word;max-height:220px;overflow:auto}
+.progress{display:flex;flex-direction:column;gap:8px}
+
+/* temas */
+.temas{display:grid;grid-template-columns:repeat(auto-fill,minmax(170px,1fr));gap:8px;margin-top:12px}
+.chk{display:flex;align-items:center;gap:10px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;cursor:pointer;background:var(--bg);min-width:0}
+.chk input{width:18px;height:18px;accent-color:var(--accent);margin:0;flex:none}
+.chk span{display:flex;flex-direction:column;min-width:0;line-height:1.25}
+.chk b{font-size:14.5px;overflow-wrap:anywhere} .chk em{font-style:normal;font-size:12px;color:var(--muted)}
+.chk:has(input:checked){border-color:var(--accent);background:var(--accent-soft)}
+
+.modes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:620px){.modes{grid-template-columns:1fr}}
+.mode{text-align:left;background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:18px;cursor:pointer;display:flex;flex-direction:column;gap:4px;transition:border-color .15s,transform .15s}
+.mode:hover{border-color:var(--accent);transform:translateY(-1px)}
+.mode .k{font-family:var(--f-mono);font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:var(--accent)}
+.mode .n{font-family:var(--f-display);font-size:34px;font-weight:600;line-height:1}
+.mode .d{font-size:13px;color:var(--muted)}
+.mode.alt{flex-direction:row;align-items:center;gap:14px}
+.mode.alt .t{display:flex;flex-direction:column;min-width:0}
+.badge{margin-left:auto;font-family:var(--f-mono);font-size:12px;padding:3px 8px;border-radius:99px;background:var(--bad-soft);color:var(--bad);flex:none}
+
+/* reactivo */
+.qhead{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.qcount{font-family:var(--f-mono);font-size:14px}
+.bar{height:8px;border-radius:99px;background:var(--line);overflow:hidden;margin-top:10px}
+.bar i{display:block;height:100%;background:var(--accent);border-radius:99px;transition:width .25s}
+.qtext{font-family:var(--f-display);font-size:clamp(20px,3.6vw,24px);line-height:1.35;font-weight:500;text-wrap:pretty;white-space:pre-line}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{display:flex;gap:14px;align-items:flex-start;text-align:left;width:100%;background:var(--surface);border:1.5px solid var(--line);border-radius:10px;padding:14px 16px;cursor:pointer;font-size:16px;line-height:1.45}
+.opt:hover:not(:disabled){border-color:var(--accent)}
+.opt .l{flex:none;width:28px;height:28px;border-radius:50%;display:grid;place-items:center;font-family:var(--f-mono);font-size:13px;border:1.5px solid var(--line);color:var(--muted)}
+.opt span:last-child{min-width:0;padding-top:2px}
+.opt.ok{border-color:var(--good);background:var(--good-soft)} .opt.ok .l{background:var(--good);border-color:var(--good);color:var(--surface)}
+.opt.no{border-color:var(--bad);background:var(--bad-soft)} .opt.no .l{background:var(--bad);border-color:var(--bad);color:var(--surface)}
+.opt:disabled{cursor:default}
+.mk{display:inline-block;margin-left:8px;font-size:12px;font-weight:700;padding:1px 8px;border-radius:99px;vertical-align:1px}
+.mk.ok{background:var(--good);color:var(--surface)} .mk.no{background:var(--bad);color:var(--surface)}
+.fb{border-radius:10px;padding:14px 16px;border:1px solid;display:flex;flex-direction:column;gap:6px}
+.fb.ok{background:var(--good-soft);border-color:var(--good)} .fb.no{background:var(--bad-soft);border-color:var(--bad)}
+.fb h3{font-size:17px} .fb.ok h3{color:var(--good)} .fb.no h3{color:var(--bad)}
+.src{font-size:13px;color:var(--muted)}
+.lives{display:inline-flex;gap:4px;align-items:center;margin-left:auto}
+.heart{width:22px;height:22px;transition:transform .25s}
+.heart.on{fill:var(--bad)} .heart.off{fill:var(--line);transform:scale(.85)}
+.actions{display:flex;justify-content:space-between;gap:10px;flex-wrap:wrap;align-items:center}
+
+/* resultados */
+.score{display:flex;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.big{font-family:var(--f-display);font-weight:600;font-size:clamp(64px,14vw,92px);line-height:.9;letter-spacing:-.02em}
+.big small{font-size:.36em;color:var(--muted);font-weight:500}
+.verdict{display:inline-block;font-weight:700;padding:5px 12px;border-radius:99px;font-size:14px}
+.v-ex{background:var(--good-soft);color:var(--good)} .v-mb{background:var(--accent-soft);color:var(--accent)} .v-b{background:var(--warn-soft);color:var(--warn)} .v-r{background:var(--bad-soft);color:var(--bad)}
+.counts{display:flex;gap:18px;flex-wrap:wrap;font-size:15px}
+.tbars{display:flex;flex-direction:column;gap:12px}
+.tb{display:grid;grid-template-columns:minmax(0,180px) 1fr 52px;gap:12px;align-items:center;font-size:14px}
+.tb span:first-child{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tb .bar{margin:0} .tb .pct{text-align:right;font-family:var(--f-mono)}
+.miss{display:flex;flex-direction:column;gap:12px}
+.mi{border:1px solid var(--line);border-radius:10px;padding:16px;background:var(--surface);display:flex;flex-direction:column;gap:8px;min-width:0}
+.mi .q{font-weight:600;white-space:pre-line}
+.kv{display:grid;grid-template-columns:150px 1fr;gap:4px 12px;font-size:14.5px;margin:0}
+@media (max-width:520px){.kv{grid-template-columns:1fr}.kv dt{margin-top:6px}}
+.kv dt{color:var(--muted)} .kv dd{margin:0;min-width:0;overflow-wrap:anywhere}
+.kv .bad{color:var(--bad)} .kv .good{color:var(--good);font-weight:600}
+.exp{font-size:14.5px;background:var(--bg);border-radius:8px;padding:10px 12px;border:1px solid var(--line)}
+.over{border:1px solid var(--bad);background:var(--bad-soft);border-radius:10px;padding:12px 16px}
+
+.tiles{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px}
+@media (max-width:560px){.tiles{grid-template-columns:1fr 1fr}}
+.tile{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px;min-width:0}
+.tile .v{font-family:var(--f-display);font-size:34px;font-weight:600;line-height:1.1;font-variant-numeric:tabular-nums}
+.tile .k{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.focus{border-left:4px solid var(--bad);background:var(--surface);border-radius:var(--r);padding:16px 18px;border-top:1px solid var(--line);border-right:1px solid var(--line);border-bottom:1px solid var(--line)}
+.hist{width:100%;border-collapse:collapse;font-size:14px}
+.hist th,.hist td{text-align:left;padding:8px 6px;border-bottom:1px solid var(--line)}
+.hist th{color:var(--muted);font-weight:500;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+.hist td.r{text-align:right}
+.scroll{overflow-x:auto}
+.empty{text-align:center;padding:30px 20px;color:var(--muted)}
+
+/* revisión */
+.rq{display:flex;flex-direction:column;gap:8px}
+.rq.off{opacity:.5}
+.rq .q{font-weight:600;white-space:pre-line}
+.ans{display:flex;flex-direction:column;gap:3px;font-size:14.5px;margin:0;padding:0;list-style:none}
+.ans li{padding-left:22px;position:relative;overflow-wrap:anywhere}
+.ans li::before{position:absolute;left:0;top:0;font-weight:700}
+.ans li.c{color:var(--good);font-weight:600} .ans li.c::before{content:"✓"}
+.ans li.x{color:var(--muted)} .ans li.x::before{content:"✗";color:var(--bad)}
+.filters{display:flex;gap:6px;flex-wrap:wrap}
+.filters button{border:1px solid var(--line);background:var(--surface);border-radius:99px;padding:6px 12px;font-size:13.5px;cursor:pointer}
+.filters button.on{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
+.toast{position:fixed;left:50%;bottom:calc(20px + env(safe-area-inset-bottom,0px));transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:10px;font-size:14px;z-index:20;max-width:calc(100% - 32px)}
+.foot{margin-top:28px;font-size:12.5px;color:var(--muted)}
+details summary{cursor:pointer;font-weight:600}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+<header class="top"><div class="in">
+  <button class="brand" type="button" data-go="home">Simulador de Examen</button>
+  <nav class="nav" aria-label="Secciones">
+    <button type="button" data-go="home">Mis bancos</button>
+    <button type="button" data-go="create">Crear banco</button>
+    <button type="button" data-go="settings">Configuración</button>
+    <button type="button" data-go="help">Ayuda</button>
+  </nav>
+</div></header>
+<main class="wrap" id="app"></main>
+<div class="toast" id="toast" hidden></div>
+
+<script>
+/* ==== GENERADOR SIN IA (algoritmo) ====
+   Entrada: páginas con fragmentos de texto {str,x,top,w,h}.
+   Salida: preguntas en el formato del banco. */
+const ALGO = (() => {
+  const norm = s => s.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9ñ]+/g," ").trim();
+  const clean = s => s.replace(/\s+/g," ").replace(/\s([,.;:)])/g,"$1").replace(/\(\s/g,"(").trim();
+
+  function linesOf(items){
+    const its = items.filter(i=>i.str.trim()).map(i=>({...i, x1:i.x+i.w})).sort((a,b)=>a.top-b.top||a.x-b.x);
+    const lines=[];
+    for(const w of its){
+      let target=null;
+      for(const L of lines){
+        if(Math.abs(L.top-w.top)<Math.max(2,w.h*.35) && Math.abs(L.h-w.h)<Math.max(.6,w.h*.08) && (w.x-L.x1 < w.h*0.9 || (w.x-L.x1 < Math.min(w.h*1.9,60) && /^[a-záéíóúñ0-9,.;:)(%$]/.test(w.str.trim()))) && w.x-L.x1 > -w.h*.5){ target=L; break; }
+      }
+      if(target){ target.text += (w.x-target.x1 > w.h*.12 && !/^\s/.test(w.str) && !/\s$/.test(target.text) ? " " : "") + w.str; target.x1=Math.max(target.x1,w.x1); }
+      else lines.push({text:w.str, top:w.top, bottom:w.top+w.h, x:w.x, x1:w.x1, h:w.h});
+    }
+    lines.forEach(l=>l.text=clean(l.text));
+    return lines.filter(l=>l.text);
+  }
+
+  function blocksOf(lines){
+    lines=[...lines].sort((a,b)=>a.top-b.top||a.x-b.x);
+    const blocks=[];
+    for(const l of lines){
+      let best=null;
+      for(const b of blocks){
+        const last=b.lines[b.lines.length-1];
+        const same=Math.abs(last.h-l.h)<Math.max(.6,l.h*.08);
+        const gap=l.top-last.bottom;
+        const close=gap>=-1 && gap<l.h*1.1;
+        const overlap=Math.min(b.x1,l.x1)-Math.max(b.x,l.x)>0;
+        if(same&&close&&overlap&&!/:$/.test(last.text)) best=b;
+      }
+      if(best){best.lines.push(l);best.x=Math.min(best.x,l.x);best.x1=Math.max(best.x1,l.x1);best.bottom=l.bottom;}
+      else blocks.push({lines:[l],x:l.x,x1:l.x1,top:l.top,bottom:l.bottom,h:l.h});
+    }
+    blocks.forEach(b=>b.text=clean(b.lines.map(l=>l.text).join(" ")));
+    return blocks;
+  }
+
+  const GENERIC=/^(introducci[oó]n|conclusi[oó]n(es)?|gracias|muchas gracias|thank|thanks|índice|indice|agenda|objetivos?|tema \d+|m[oó]dulo|bibliograf|referencias|fuente|preguntas|¡?muchas)/i;
+
+  function isAcronym(s){ return /^\(?[A-ZÁÉÍÓÚÑ]{2,7}\)?$/.test(s.trim()); }
+  function initialsMatch(sig, phrase){
+    sig=sig.replace(/[()]/g,"").toUpperCase();
+    const caps=phrase.split(/\s+/).filter(w=>/^[A-ZÁÉÍÓÚÑ]/.test(w)).map(w=>w[0].normalize("NFD")[0].toUpperCase()).join("");
+    let i=0; for(const c of caps){ if(c===sig[i]) i++; if(i===sig.length) return true; }
+    return false;
+  }
+
+  function listItems(lines){
+    const items=[];
+    for(const t0 of lines){ const t=t0.replace(/^(?:[•·▪◦\-–]|\d{1,2}[.)](?=\s))\s*/,""); if(!t) continue;
+      if(items.length && (/^[a-záéíóúñ(]/.test(t) || /,$/.test(items[items.length-1]) || /\b(de|del|la|el|y|o|en|con|por|para|a)$/i.test(items[items.length-1]))) items[items.length-1]+=" "+t; else items.push(t); }
+    return items.map(t=>t.replace(/[.;,]+$/,""));
+  }
+  const looksList=items=>items.length>=3 && items.every(t=>t.split(" ").length<=7);
+
+  /* Convierte cada documento en "tarjetas": término + definición, listas y siglas */
+  function cards(docs){
+    const out=[];
+    for(const doc of docs){
+      const allBlocks=doc.pages.map(p=>({page:p.page, blocks:blocksOf(linesOf(p.items))}));
+      const sizes=[]; allBlocks.forEach(pb=>pb.blocks.forEach(b=>{ for(let k=0;k<Math.min(b.text.length,400);k+=10) sizes.push(b.h); }));
+      sizes.sort((a,b)=>a-b); const body=sizes.length?sizes[Math.floor(sizes.length/2)]:12;
+      for(const pb of allBlocks){
+        const bs=pb.blocks;
+        const ps=[]; bs.forEach(b=>{ for(let k=0;k<Math.min(b.text.length,400);k+=10) ps.push(b.h); }); ps.sort((a,b)=>a-b);
+        const pageBody=ps.length?ps[Math.floor(ps.length/2)]:body, ref=Math.min(body,pageBody);
+        const sameSize=(a,b)=>Math.abs(a.h-b.h)<Math.max(.6,a.h*.08);
+        const ov=(a,b,pad=0)=>Math.min(a.x1,b.x1+pad)-Math.max(a.x,b.x-pad)>0;
+        // un título no continúa en un párrafo del mismo tamaño justo debajo (eso sería una línea de texto justificado)
+        const isPara=b=>bs.some(o=>o!==b&&sameSize(o,b)&&o.top-b.bottom>=-2&&o.top-b.bottom<b.h*.9&&ov(o,b));
+        const isHead=b=> isAcronym(b.text) || (b.h>=ref*1.12 && b.text.split(" ").length<=8 && b.text.length>=3 && !/^\d+$/.test(b.text) && !isPara(b));
+        const heads=bs.filter(isHead);
+        for(const h of heads){
+          let term=h.text.replace(/[:.]$/,"");
+          const qm=term.match(/^¿\s*qu[eé]\s+(?:es|son)\s+(?:un|una|el|la|los|las)?\s*(.+?)\?$/i);
+          if(qm) term=qm[1];
+          term=term.charAt(0).toUpperCase()+term.slice(1);
+          if(GENERIC.test(term)) continue;
+          if(term===term.toUpperCase() && !isAcronym(term)) continue;
+          if(pb.page===1 && doc.pages.length>3) continue;
+          if(term.split(" ").length>=4 && /\s(es|son|pueden|puede|debe|deben|tienen|tiene|se)\s/i.test(" "+term+" ")) continue;
+          const acr=isAcronym(term);
+          const below=b=>b!==h && !/^[\d\s.)-]*$/.test(b.text) && b.text.length>=3 && (acr||!heads.includes(b)) && b.top>=h.bottom-2 && Math.min(b.x1,h.x1+60)-Math.max(b.x,h.x-60)>0;
+          // el título más cercano por encima del bloque debe ser este (evita que el título de la diapositiva "robe" la primera columna)
+          const ownHead=b=>{const ab=heads.filter(o=>o.bottom<=b.top+2 && Math.min(b.x1,o.x1+60)-Math.max(b.x,o.x-60)>0); return ab.length && ab.reduce((m,o)=>(b.top-o.bottom)<(b.top-m.bottom)?o:m)===h;};
+          const cands=bs.filter(b=>below(b)&&ownHead(b));
+          if(!cands.length) continue;
+          cands.sort((a,b)=>a.top-b.top);
+          const c=cands[0];
+          if(c.top-h.bottom>Math.max(h.h*8,380)) continue;
+          // un segundo bloque tipo lista bajo el mismo título = ejemplos de ese concepto
+          const second=cands[1];
+          if(second && !acr){ const it2=listItems(second.lines.map(l=>l.text)); if(looksList(it2)) out.push({kind:"lista",term:term,items:it2,page:pb.page,doc:doc.name,ejemplos:true}); }
+          const words=c.text.split(" ").length;
+          if(isAcronym(term) && initialsMatch(term,c.text)){ out.push({kind:"sigla",term:term.replace(/[()]/g,""),def:c.text.replace(/\.$/,""),page:pb.page,doc:doc.name}); continue; }
+          if(isAcronym(c.text)) continue;
+          // ¿lista? varias líneas cortas que no son la continuación de una oración
+          const it=listItems(c.lines.map(l=>l.text));
+          if(c.lines.length>=3 && looksList(it)){ out.push({kind:"lista",term,items:it,page:pb.page,doc:doc.name}); continue; }
+          if(words<4 || /:$/.test(c.text)) continue;
+          if(/m[oó]dulo\s*\d|tema\s*\d/i.test(c.text) && words<8) continue;
+          const letters=c.text.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g,""); if(letters && letters.replace(/[^A-ZÁÉÍÓÚÑ]/g,"").length/letters.length>.6) continue;
+          out.push({kind:"def",term,def:c.text,page:pb.page,doc:doc.name});
+        }
+        // siglas en línea: "Expansión (SIG)"
+        for(const b of bs){
+          for(const m of b.text.matchAll(/((?:[A-ZÁÉÍÓÚ][\wáéíóúñ]+\s(?:de\s|del\s|la\s|en\s|y\s)*){2,8})\(([A-ZÁÉÍÓÚÑ]{2,7})\)/g)){
+            if(initialsMatch(m[2],m[1])) out.push({kind:"sigla",term:m[2],def:m[1].trim(),page:pb.page,doc:doc.name});
+          }
+        }
+      }
+    }
+    // quitar duplicados; si dos términos comparten definición, conservar el más corto
+    const byDef=new Map();
+    for(const c of out){ const k=c.kind+"|"+norm(c.def||c.items.join(" ")); const prev=byDef.get(k); if(!prev||c.term.length<prev.term.length) byDef.set(k,c); }
+    const seen=new Set();
+    return [...byDef.values()].filter(c=>{const k=c.kind+norm(c.term); if(seen.has(k))return false; seen.add(k); return true;});
+  }
+
+  const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+  function firstSentences(s,max=190){
+    if(s.length<=max) return s;
+    const cut=s.slice(0,max); const p=Math.max(cut.lastIndexOf(". "),cut.lastIndexOf("; "));
+    return (p>60?cut.slice(0,p+1):cut.slice(0,cut.lastIndexOf(" "))+"…");
+  }
+  function mask(def,term){
+    let out=def;
+    const keys=[...new Set(norm(term).split(" ").filter(w=>w.length>=5))];
+    for(const k of keys){
+      const stem=k.slice(0,Math.max(5,k.length-3));
+      out=out.replace(new RegExp("\\b"+stem.split("").map(ch=>ch.replace(/[aeiou]/,v=>`[${v}${({a:"á",e:"é",i:"í",o:"ó",u:"ú"})[v]}]`)).join("")+"[\\wáéíóúñ]*","gi"),"____");
+    }
+    return out;
+  }
+  const jacc=(a,b)=>{const A=new Set(norm(a).split(" ").filter(w=>w.length>3)),B=new Set(norm(b).split(" ").filter(w=>w.length>3));let i=0;A.forEach(x=>B.has(x)&&i++);return i/Math.max(1,Math.min(A.size,B.size));};
+
+  /* Genera preguntas a partir de las tarjetas */
+  function questions(cs){
+    const defs=cs.filter(c=>c.kind==="def"), sig=cs.filter(c=>c.kind==="sigla"), lists=cs.filter(c=>c.kind==="lista");
+    const qs=[];
+    const temaOf=c=>c.doc;
+    const pickTerms=(c,pool,n)=>{
+      const first=norm(c.term).split(" ")[0];
+      const ok=pool.filter(o=>o!==c && norm(o.term)!==norm(c.term) && (!o.def||!c.def||jacc(o.def,c.def)<.5));
+      const similar=shuffle(ok.filter(o=>norm(o.term).split(" ")[0]===first)), rest=shuffle(ok.filter(o=>norm(o.term).split(" ")[0]!==first));
+      const same=[...similar.filter(o=>o.doc===c.doc),...rest.filter(o=>o.doc===c.doc),...similar.filter(o=>o.doc!==c.doc),...rest.filter(o=>o.doc!==c.doc)];
+      return same.slice(0,n);
+    };
+    for(const c of defs){
+      const d=pickTerms(c,defs,3);
+      if(d.length<3) continue;
+      const short=firstSentences(c.def);
+      qs.push({tema:temaOf(c),dificultad:2,tipo:"definicion",concepto:c.term,
+        pregunta:`¿A qué concepto corresponde esta descripción?\n«${mask(short,c.term)}»`,
+        correcta:c.term,incorrectas:d.map(o=>o.term),
+        explicacion:`Según el material (pág. ${c.page}): ${c.term} — ${short}`,fuente:c.def,pagina:c.page,origen:"algoritmo"});
+      qs.push({tema:temaOf(c),dificultad:2,tipo:"identificacion",concepto:c.term,
+        pregunta:`¿Cuál de las siguientes opciones describe mejor: ${c.term}?`,
+        correcta:short,incorrectas:d.map(o=>firstSentences(o.def)),
+        explicacion:`El material (pág. ${c.page}) lo describe así: ${short}`,fuente:c.def,pagina:c.page,origen:"algoritmo"});
+    }
+    // verdadero/falso con definiciones cruzadas
+    for(const c of shuffle(defs).slice(0,Math.ceil(defs.length*.35))){
+      const o=pickTerms(c,defs,1)[0]; if(!o) continue;
+      const truthy=Math.random()<.5, d=firstSentences(truthy?c.def:o.def,150);
+      qs.push({tema:temaOf(c),dificultad:truthy?1:2,tipo:"verdadero_falso",concepto:c.term,
+        pregunta:`Verdadero o falso: según el material, "${c.term}" se describe así: «${mask(d,c.term)}»`,
+        correcta:truthy?"Verdadero":"Falso",incorrectas:[truthy?"Falso":"Verdadero"],
+        explicacion: truthy?`Es verdadero. Así lo describe el material (pág. ${c.page}).`:`Es falso. Esa descripción corresponde a "${o.term}". ${c.term}: ${firstSentences(c.def,150)}`,
+        fuente:c.def,pagina:c.page,origen:"algoritmo"});
+    }
+    for(const c of sig){
+      const others=shuffle(sig.filter(o=>o.term!==c.term)).slice(0,3).map(o=>o.def);
+      const extra=shuffle(defs).map(o=>o.term).filter(t=>t.split(" ").length>=3);
+      while(others.length<3&&extra.length) others.push(extra.pop());
+      if(others.length<3) continue;
+      qs.push({tema:temaOf(c),dificultad:1,tipo:"definicion",concepto:"Siglas: "+c.term,
+        pregunta:`¿Qué significa ${c.term}?`,correcta:c.def,incorrectas:others,
+        explicacion:`Según el material (pág. ${c.page}), ${c.term} significa ${c.def}.`,fuente:c.def,pagina:c.page,origen:"algoritmo"});
+    }
+    for(const L of lists){
+      if(L.items.length<3) continue;
+      const notIn=x=>!L.items.some(i=>norm(i)===norm(x)); const sameDoc=shuffle([...lists.filter(o=>o!==L&&o.doc===L.doc).flatMap(o=>o.items),...defs.filter(d=>d.doc===L.doc).map(d=>d.term)]).filter(notIn); const otherDoc=shuffle([...lists.filter(o=>o.doc!==L.doc).flatMap(o=>o.items),...defs.filter(d=>d.doc!==L.doc).map(d=>d.term)]).filter(notIn); const foreign=[...sameDoc,...otherDoc];
+      if(foreign.length<3) continue;
+      const items=shuffle(L.items);
+      qs.push({tema:temaOf(L),dificultad:2,tipo:"cual_no",concepto:L.term,
+        pregunta:`¿Cuál de los siguientes NO aparece en "${L.term}" según el material?`,
+        correcta:foreign[0],incorrectas:items.slice(0,3),
+        explicacion:`En "${L.term}" el material (pág. ${L.page}) incluye: ${L.items.join("; ")}.`,fuente:L.items.join(" "),pagina:L.page,origen:"algoritmo"});
+      qs.push({tema:temaOf(L),dificultad:1,tipo:"identificacion",concepto:L.term,
+        pregunta:`¿Cuál de los siguientes forma parte de "${L.term}" según el material?`,
+        correcta:items[0],incorrectas:foreign.slice(1,4),
+        explicacion:`En "${L.term}" el material (pág. ${L.page}) incluye: ${L.items.join("; ")}.`,fuente:L.items.join(" "),pagina:L.page,origen:"algoritmo"});
+    }
+    return qs;
+  }
+  return {linesOf,blocksOf,cards,questions,norm};
+})();
+if(typeof module!=="undefined") module.exports=ALGO;
+
+</script>
+<script>
+"use strict";
+/* =========================================================
+   SIMULADOR DE EXAMEN — app genérica por bancos de preguntas
+   ========================================================= */
+const FORMAT="simulador-examen-v1";
+const KEY="simuladorExamen_v2";
+const PDFJS_VER="5.7.284";
+const PDFJS_URL=`https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VER}/legacy/build/pdf.min.mjs`;
+const PDFJS_WORKER=`https://cdn.jsdelivr.net/npm/pdfjs-dist@${PDFJS_VER}/legacy/build/pdf.worker.min.mjs`;
+const MAXLIVES=3, L="ABCD";
+const DIF={1:"Fácil",2:"Intermedia",3:"Difícil"};
+const TIPOS=["definicion","identificacion","diferencia","caso","cual_no","verdadero_falso"];
+
+/* ---------- utilidades ---------- */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const uid=()=>Math.random().toString(36).slice(2,9)+Date.now().toString(36).slice(-4);
+const slug=s=>(s||"banco").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40)||"banco";
+const normTxt=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9ñ]+/g," ").replace(/\s+/g," ").trim();
+function toast(msg){const t=$("#toast");t.textContent=msg;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3200);}
+function download(name,text,type="application/json"){
+  try{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([text],{type:type+";charset=utf-8"}));a.download=name;document.body.appendChild(a);a.click();setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove()},1500);toast("Descargando "+name);}
+  catch(e){toast("No se pudo descargar. Usa el botón Copiar.");}
+}
+async function copy(text){
+  try{await navigator.clipboard.writeText(text);toast("Copiado");}
+  catch(e){const ta=document.createElement("textarea");ta.value=text;document.body.appendChild(ta);ta.select();try{document.execCommand("copy");toast("Copiado");}catch(_){toast("Selecciona el texto y cópialo manualmente.");}ta.remove();}
+}
+const readText=f=>new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(r.result);r.onerror=ko;r.readAsText(f)});
+const readB64=f=>new Promise((ok,ko)=>{const r=new FileReader();r.onload=()=>ok(String(r.result).split(",")[1]);r.onerror=ko;r.readAsDataURL(f)});
+
+/* ---------- almacenamiento ---------- */
+let S={banks:{},order:[],keys:{},prefs:{}};
+try{const r=localStorage.getItem(KEY);if(r)S={...S,...JSON.parse(r)};}catch(e){}
+function save(){
+  try{localStorage.setItem(KEY,JSON.stringify(S));return true;}
+  catch(e){toast("No hay espacio para guardar. Exporta y elimina bancos que no uses.");return false;}
+}
+/* configuración de IA (opción 3) */
+S.ai=S.ai||{provider:S.prefs?.provider||"gemini",keys:{...(S.keys||{})},models:{},baseUrl:"http://localhost:11434/v1",remember:true,sendPdf:true,verified:{}};
+const SESSION_KEYS={};
+const EMBEDDED=(()=>{try{return window.self!==window.top;}catch(e){return true;}})();
+const EMBED_MSG="Estás viendo la app dentro de otra aplicación (por ejemplo, la vista previa de Claude). Desde ahí la página no puede conectarse a internet. Descarga el archivo y ábrelo con doble clic en Chrome, Edge o Safari.";
+function aiCfg(){const a=S.ai,p=a.provider;return {provider:p,key:SESSION_KEYS[p]??a.keys[p]??"",model:a.models[p]||PROVIDERS[p].model,baseUrl:a.baseUrl,sendPdf:a.sendPdf};}
+function newStats(temas){return {exams:[],tema:Object.fromEntries(temas.map(t=>[t,{c:0,t:0}])),errors:{},recent:[]};}
+
+/* =========================================================
+   LECTOR DE PDF (pdf.js, se descarga solo cuando se necesita)
+   ========================================================= */
+let pdfjsP=null;
+function loadPdfjs(){
+  if(!pdfjsP) pdfjsP=import(PDFJS_URL).then(m=>{m.GlobalWorkerOptions.workerSrc=PDFJS_WORKER;return m;})
+    .catch(e=>{pdfjsP=null;throw new Error("No se pudo cargar el lector de PDF. Revisa tu conexión a internet (solo se necesita para leer PDFs).");});
+  return pdfjsP;
+}
+async function readPdf(file,onPage){
+  const pdfjs=await loadPdfjs();
+  const pdf=await pdfjs.getDocument({data:new Uint8Array(await file.arrayBuffer()),verbosity:0}).promise;
+  const pages=[];let text="";
+  for(let n=1;n<=pdf.numPages;n++){
+    const p=await pdf.getPage(n);const vp=p.getViewport({scale:1});const tc=await p.getTextContent();
+    const items=tc.items.filter(i=>typeof i.str==="string").map(i=>{const h=i.height||Math.abs(i.transform[3])||10;return {str:i.str,x:i.transform[4],top:vp.height-i.transform[5]-h,w:i.width,h};});
+    pages.push({page:n,items});
+    // por bloques: respeta columnas y párrafos (leer renglón por renglón mezclaría columnas)
+    const blocks=ALGO.blocksOf(ALGO.linesOf(items)).sort((a,b)=>a.top-b.top||a.x-b.x).map(b=>b.text);
+    text+=`\n[Página ${n}]\n`+blocks.join("\n");
+    onPage&&onPage(n,pdf.numPages);
+  }
+  const chars=text.replace(/\[Página \d+\]|\s/g,"").length;
+  return {name:file.name.replace(/\.pdf$/i,"").replace(/[_]+/g," ").replace(/(\s\d{5,})+$/,"").trim()||file.name,file,pages,text,numPages:pdf.numPages,lowText:chars<pdf.numPages*40};
+}
+
+/* =========================================================
+   IMPORTAR: lector tolerante de lo que entrega cualquier IA
+   ========================================================= */
+function findJsonChunks(txt){
+  txt=txt.replace(/^﻿/,"");
+  const out=[];let depth=0,start=-1,inStr=false,escp=false,open="";
+  for(let i=0;i<txt.length;i++){
+    const ch=txt[i];
+    if(inStr){ if(escp)escp=false; else if(ch==="\\")escp=true; else if(ch==='"')inStr=false; continue; }
+    if(ch==='"'){ if(depth>0) inStr=true; continue; }
+    if(ch==="{"||ch==="["){ if(depth===0){start=i;open=ch;} depth++; }
+    else if(ch==="}"||ch==="]"){ if(depth>0){depth--; if(depth===0&&start>=0){out.push(txt.slice(start,i+1));start=-1;}} }
+  }
+  return out;
+}
+function tryParse(s){
+  const fixes=[x=>x, x=>x.replace(/,\s*([}\]])/g,"$1"), x=>x.replace(/[“”]/g,'"').replace(/[‘’]/g,"'").replace(/,\s*([}\]])/g,"$1"),
+    x=>x.replace(/\/\/[^\n"]*$/gm,"").replace(/,\s*([}\]])/g,"$1")];
+  for(const f of fixes){ try{return JSON.parse(f(s));}catch(e){} }
+  return undefined;
+}
+const pick=(o,...ks)=>{for(const k of ks){ if(o&&o[k]!==undefined&&o[k]!==null&&o[k]!=="") return o[k]; } return undefined;};
+function difOf(v){
+  if(typeof v==="number") return v<=1?1:v>=3?3:2;
+  const s=normTxt(v); if(/^f|basic|easy|baja/.test(s)) return 1; if(/^d|alta|hard|avanz/.test(s)) return 3; return 2;
+}
+function normalizeQ(r,temaDef){
+  if(!r||typeof r!=="object") return {err:"no es una pregunta"};
+  const pregunta=String(pick(r,"pregunta","question","enunciado","reactivo")||"").trim();
+  let opciones=pick(r,"opciones","options","alternativas");
+  let correcta=pick(r,"correcta","respuesta_correcta","respuestaCorrecta","respuesta","answer","correct");
+  let incorrectas=pick(r,"incorrectas","distractores","respuestas_incorrectas","incorrect","wrong");
+  if(opciones&&!Array.isArray(opciones)&&typeof opciones==="object") opciones=Object.values(opciones);
+  if(Array.isArray(opciones)){
+    const txts=opciones.map(o=>typeof o==="object"?String(pick(o,"texto","text","opcion")||""):String(o)).map(s=>s.replace(/^[A-Da-d][).:-]\s+/,"").trim());
+    const markIdx=opciones.findIndex(o=>typeof o==="object"&&(o.correcta===true||o.correct===true));
+    if(markIdx>=0) correcta=txts[markIdx];
+    else if(typeof correcta==="number") correcta=txts[correcta]??correcta;
+    else if(typeof correcta==="string"&&/^[A-Da-d]\)?$/.test(correcta.trim())) correcta=txts[L.indexOf(correcta.trim()[0].toUpperCase())];
+    else if(typeof correcta==="string"){ const m=correcta.match(/^[A-Da-d][).:-]\s+(.*)$/); if(m) correcta=m[1]; }
+    if(!incorrectas) incorrectas=txts.filter(t=>normTxt(t)!==normTxt(correcta));
+  }
+  correcta=String(correcta??"").trim();
+  if(!Array.isArray(incorrectas)) incorrectas=incorrectas?[incorrectas]:[];
+  incorrectas=[...new Set(incorrectas.map(x=>String(x).trim()).filter(x=>x&&normTxt(x)!==normTxt(correcta)))].slice(0,3);
+  let tipo=normTxt(pick(r,"tipo","type")||"").replace(/ /g,"_");
+  const tf=/^(verdadero|falso)$/i.test(correcta);
+  if(tf){ tipo="verdadero_falso"; incorrectas=[/^v/i.test(correcta)?"Falso":"Verdadero"]; correcta=/^v/i.test(correcta)?"Verdadero":"Falso"; }
+  if(!pregunta) return {err:"falta el texto de la pregunta"};
+  if(!correcta) return {err:"falta la respuesta correcta"};
+  if(!tf&&incorrectas.length<2) return {err:"tiene menos de 2 respuestas incorrectas"};
+  const pg=parseInt(pick(r,"pagina","página","page"),10);
+  return {q:{id:uid(),tema:String(pick(r,"tema","topic","unidad")||temaDef||"General").trim(),dificultad:difOf(pick(r,"dificultad","difficulty","nivel")),
+    tipo:TIPOS.includes(tipo)?tipo:"identificacion",concepto:String(pick(r,"concepto","concept","tema")||"").trim().slice(0,80),
+    pregunta,correcta,incorrectas,explicacion:String(pick(r,"explicacion","explicación","explanation","justificacion","retroalimentacion")||"").trim(),
+    fuente:String(pick(r,"fuente","cita","source","quote")||"").trim(),pagina:isNaN(pg)?null:pg,verif:null,origen:"ia"}};
+}
+/* Devuelve {materia, temas, preguntas, descartadas:[{n,motivo}], bloques} */
+function parseBank(text){
+  const res={materia:"",temas:[],preguntas:[],descartadas:[],bloques:0};
+  const chunks=findJsonChunks(text);
+  const objs=[];
+  for(const c of chunks){ const v=tryParse(c); if(v!==undefined){objs.push(v);res.bloques++;} }
+  if(!objs.length){ const v=tryParse(text.trim()); if(v!==undefined) objs.push(v); }
+  let n=0;
+  const takeArr=(arr,temaDef)=>arr.forEach(r=>{n++;const x=normalizeQ(r,temaDef); if(x.q)res.preguntas.push(x.q); else res.descartadas.push({n,motivo:x.err});});
+  for(const o of objs){
+    if(Array.isArray(o)){ if(o.length&&typeof o[0]==="object") takeArr(o); continue; }
+    if(typeof o!=="object") continue;
+    res.materia=res.materia||String(pick(o,"materia","asignatura","titulo","title","subject")||"");
+    const temas=pick(o,"temas","topics","unidades");
+    if(Array.isArray(temas)) temas.forEach(t=>{const s=typeof t==="object"?String(pick(t,"nombre","name","titulo")||""):String(t); if(s&&!res.temas.includes(s))res.temas.push(s);});
+    const arr=pick(o,"preguntas","questions","reactivos","banco");
+    if(Array.isArray(arr)) takeArr(arr);
+    else if(o.pregunta||o.question){ takeArr([o]); }
+  }
+  // evitar duplicados exactos
+  const seen=new Set(); res.preguntas=res.preguntas.filter(q=>{const k=normTxt(q.pregunta)+"|"+normTxt(q.correcta); if(seen.has(k))return false; seen.add(k); return true;});
+  res.preguntas.forEach(q=>{ if(!res.temas.includes(q.tema)) res.temas.push(q.tema); });
+  return res;
+}
+
+/* ---------- verificación de la fuente contra el texto del PDF ---------- */
+function verify(qs,docs){
+  if(!docs||!docs.length) return;
+  const corpus=" "+normTxt(docs.map(d=>d.text).join(" "))+" ";
+  for(const q of qs){
+    if(q.origen==="algoritmo"){q.verif="ok";continue;}
+    const f=normTxt(q.fuente);
+    if(!f||f.split(" ").length<4){ q.verif="sinfuente"; continue; }
+    if(corpus.includes(" "+f+" ")||corpus.includes(f)){ q.verif="ok"; continue; }
+    const w=f.split(" "); let hit=0,tot=0;
+    for(let i=0;i+4<=w.length;i+=2){ tot++; if(corpus.includes(w.slice(i,i+4).join(" "))) hit++; }
+    q.verif = tot&&hit/tot>=.7 ? "ok" : "no";
+  }
+}
+
+/* =========================================================
+   INSTRUCCIONES PARA LA IA (el archivo .txt)
+   ========================================================= */
+function buildPrompt(cfg,{api=false,batch=null,avoid=[]}={}){
+  const N=batch||cfg.n;
+  const temas=cfg.temas.filter(Boolean);
+  const temasTxt=temas.length?temas.map((t,i)=>`   ${i+1}. ${t}`).join("\n"):"   Detecta tú los temas: usa el título de cada PDF (o de cada unidad o capítulo) como nombre de tema.";
+  const prio=cfg.prioridad.trim()?cfg.prioridad.trim().split(/\n+/).map(x=>"   - "+x.trim()).join("\n"):"   (Ninguno en especial: cubre todo el material de forma equilibrada.)";
+  const ejemploTema=temas[0]||"Nombre del tema 1";
+  const ejemplo=JSON.stringify({formato:FORMAT,materia:cfg.materia||"Nombre de la materia",temas:temas.length?temas:["Nombre del tema 1","Nombre del tema 2"],preguntas:[
+    {tema:ejemploTema,dificultad:"intermedia",tipo:"diferencia",concepto:"Concepto A vs. concepto B",pregunta:"¿Cuál es la principal diferencia entre el concepto A y el concepto B?",correcta:"Texto de la respuesta correcta",incorrectas:["Texto de una respuesta incorrecta pero creíble","Otra respuesta incorrecta pero creíble","Una tercera respuesta incorrecta pero creíble"],explicacion:"Explicación sencilla de 1 a 3 oraciones de por qué esa es la respuesta correcta.",fuente:"Copia aquí, palabra por palabra, la frase del PDF que respalda la respuesta",pagina:4},
+    {tema:ejemploTema,dificultad:"facil",tipo:"verdadero_falso",concepto:"Concepto C",pregunta:"Verdadero o falso: afirmación basada en el material.",correcta:"Falso",incorrectas:["Verdadero"],explicacion:"Por qué la afirmación es falsa según el material.",fuente:"Frase exacta del PDF",pagina:7}
+  ]},null,2);
+  const entrega = api
+? `== CÓMO RESPONDER ==
+Responde ÚNICAMENTE con el JSON (sin texto antes ni después, sin bloques de código).
+${avoid.length?`\nYa existen estas preguntas; NO las repitas ni hagas variantes de ellas:\n${avoid.slice(-120).map(a=>"- "+a).join("\n")}\n`:""}`
+: `== CÓMO ENTREGAR EL RESULTADO ==
+Opción A (preferida): si puedes crear archivos, entrégame un archivo descargable llamado:
+   banco-${slug(cfg.materia)}.json
+con todo el JSON adentro.
+
+Opción B: si no puedes crear archivos, escribe el JSON completo dentro de UN SOLO bloque de código, sin texto antes ni después.
+
+Si no cabe en una sola respuesta: divídelo en partes de máximo 25 preguntas.
+   - Cada parte debe ser un JSON COMPLETO y válido, con la misma estructura (incluye "formato", "materia" y "temas" en cada parte).
+   - Al final de cada parte escribe: PARTE X DE Y — escribe CONTINUAR para recibir la siguiente.
+   - No repitas preguntas entre partes.`;
+  return `INSTRUCCIONES PARA CREAR UN BANCO DE PREGUNTAS
+Archivo generado por el Simulador de Examen. Léelo completo antes de empezar.
+
+== TU TAREA ==
+Actúa como profesor universitario que prepara un examen de práctica.
+Con base ÚNICAMENTE en los archivos PDF de estudio que te adjunté en esta conversación, crea ${N} preguntas de opción múltiple${batch?" (este es un lote; habrá más)":""} para la materia:
+   ${cfg.materia||"(usa el nombre de la materia que aparezca en los PDF)"}
+
+== TEMAS ==
+${temasTxt}
+Reparte las preguntas entre los temas de forma proporcional a la cantidad de contenido de cada uno.
+
+== CONCEPTOS QUE EL ESTUDIANTE QUIERE PRIORIZAR ==
+${prio}
+
+== REGLAS DE CONTENIDO (OBLIGATORIAS) ==
+1. Usa SOLO información que aparezca en los PDF. No agregues conceptos, definiciones, leyes, cifras, ejemplos reales ni datos de otras fuentes.
+2. Si el PDF contradice lo que tú sabes, usa lo que dice el PDF. No lo corrijas.
+3. Lee también el texto que está dentro de imágenes, diagramas y tablas.
+4. Cada pregunta debe tener UNA sola respuesta correcta, sin ambigüedad.
+5. Escribe 3 respuestas incorrectas creíbles: del mismo tema, con longitud y estilo parecidos a la correcta. La correcta NO debe ser siempre la más larga.
+6. Prohibido usar "Todas las anteriores", "Ninguna de las anteriores", "A y B" o similares.
+7. Nada de preguntas tramposas ni de datos triviales (nombre del autor, número de diapositiva, fechas de la presentación).
+8. Mezcla estos tipos de pregunta:
+   - definicion: ¿Qué es...?
+   - identificacion: ¿Cuál de los siguientes es un ejemplo de...?
+   - diferencia: ¿Cuál es la diferencia entre X y Y?
+   - caso: una situación práctica breve donde hay que aplicar un concepto.
+   - cual_no: ¿Cuál de los siguientes NO corresponde a...?
+   - verdadero_falso: úsalo poco (máximo 10% del total).
+9. Dificultad aproximada: 30% "facil" (definiciones directas), 45% "intermedia" (distinguir conceptos parecidos), 25% "dificil" (casos prácticos y aplicación).
+10. "explicacion": de 1 a 3 oraciones, en lenguaje sencillo, de por qué la respuesta correcta es correcta.
+11. "fuente": copia TEXTUALMENTE, palabra por palabra, de 8 a 40 palabras del PDF que respaldan la respuesta. No la resumas ni la cambies. Si la información viene de una imagen o tabla, copia el texto que se ve en ella.
+12. "pagina": número de página del PDF donde está la fuente.
+13. No repitas preguntas ni preguntes lo mismo con otras palabras.
+
+== FORMATO OBLIGATORIO (JSON) ==
+Usa exactamente esta estructura. El contenido del ejemplo es solo de muestra; no lo copies.
+
+${ejemplo}
+
+Reglas del formato:
+- "formato" siempre debe ser "${FORMAT}".
+- "tema" de cada pregunta debe ser exactamente uno de los nombres de "temas".
+- "dificultad": solo "facil", "intermedia" o "dificil".
+- "tipo": solo definicion, identificacion, diferencia, caso, cual_no o verdadero_falso.
+- "incorrectas": exactamente 3 textos. En verdadero_falso: "correcta" es "Verdadero" o "Falso", e "incorrectas" lleva solo la otra palabra.
+- Dentro de los textos no uses comillas dobles; si necesitas citar, usa « ».
+- JSON válido: sin comentarios y sin comas al final de las listas.
+
+${entrega}
+
+== ANTES DE RESPONDER, REVISA ==
+- Que sean ${N} preguntas.
+- Que cada respuesta correcta esté respaldada por su "fuente" y que la fuente sea copia exacta del PDF.
+- Que ninguna pregunta tenga dos respuestas que podrían ser correctas.
+- Que el JSON sea válido.
+`;
+}
+
+/* =========================================================
+   CONECTAR TU IA CON CLAVE
+   ========================================================= */
+const PROVIDERS={
+  gemini:{name:"Google Gemini",model:"gemini-flash-latest",models:["gemini-flash-latest","gemini-flash-lite-latest","gemini-2.5-flash"],keyUrl:"https://aistudio.google.com/apikey",pdf:true},
+  openrouter:{name:"OpenRouter",model:"meta-llama/llama-3.3-70b-instruct:free",keyUrl:"https://openrouter.ai/keys",pdf:false},
+  custom:{name:"Otra (compatible con OpenAI)",model:"",keyUrl:"",pdf:false}
+};
+class ApiError extends Error{constructor(kind,msg){super(msg);this.kind=kind;}}
+async function callAI(cfg,prompt,docs){
+  const p=cfg.provider;
+  let res;
+  try{
+    if(p==="gemini"){
+      const parts=[];
+      if(cfg.sendPdf){ for(const d of docs) parts.push({inline_data:{mime_type:"application/pdf",data:d.b64}}); }
+      else parts.push({text:"MATERIAL DE ESTUDIO (texto extraído de los PDF):\n"+docs.map(d=>`\n===== PDF: ${d.name} =====\n${d.text}`).join("\n")});
+      parts.push({text:prompt});
+      res=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`,{method:"POST",
+        headers:{"Content-Type":"application/json","x-goog-api-key":cfg.key},
+        body:JSON.stringify({contents:[{role:"user",parts}],generationConfig:{temperature:.4,responseMimeType:"application/json"}})});
+    }else{
+      const base=p==="openrouter"?"https://openrouter.ai/api/v1":cfg.baseUrl.replace(/\/+$/,"");
+      const headers={"Content-Type":"application/json"}; if(cfg.key) headers.Authorization="Bearer "+cfg.key;
+      if(p==="openrouter"){headers["X-Title"]="Simulador de Examen";}
+      const material=docs.map(d=>`\n===== PDF: ${d.name} =====\n${d.text}`).join("\n");
+      res=await fetch(base+"/chat/completions",{method:"POST",headers,body:JSON.stringify({model:cfg.model,temperature:.4,
+        messages:[{role:"system",content:"Eres un profesor universitario que crea exámenes de práctica. Respondes solo con JSON válido."},
+                  {role:"user",content:"MATERIAL DE ESTUDIO (texto extraído de los PDF):\n"+material+"\n\n"+prompt}]})});
+    }
+  }catch(e){ throw new ApiError("net","No se pudo conectar con "+PROVIDERS[p].name+". Puede ser falta de internet o que el servicio no permita conexiones desde esta página."); }
+  let body=null; const raw=await res.text(); try{body=JSON.parse(raw);}catch(e){}
+  if(!res.ok){
+    const msg=body?.error?.message||body?.message||raw.slice(0,200);
+    if(res.status===400&&/api key|API_KEY/i.test(msg)||res.status===401||res.status===403) throw new ApiError("key","La clave no es válida o no tiene permiso. Revisa que la copiaste completa. Detalle: "+msg);
+    if(res.status===429) throw new ApiError("limit","Llegaste al límite gratuito de "+PROVIDERS[p].name+" por ahora. Espera un rato o intenta mañana. Detalle: "+msg);
+    if(res.status===404) throw new ApiError("model","El modelo «"+cfg.model+"» no existe o ya no está disponible. Prueba con otro. Detalle: "+msg);
+    if(res.status===413||/too large|token/i.test(msg)) throw new ApiError("size","El material es demasiado grande para este servicio. Prueba con menos PDFs o con Gemini. Detalle: "+msg);
+    throw new ApiError("other",`Error ${res.status}: ${msg}`);
+  }
+  const out = p==="gemini" ? (body?.candidates?.[0]?.content?.parts||[]).map(x=>x.text||"").join("") : (body?.choices?.[0]?.message?.content||"");
+  if(!out) throw new ApiError("empty","El servicio respondió vacío. Intenta de nuevo.");
+  return out;
+}
+
+/* =========================================================
+   ESTADO DE PANTALLAS
+   ========================================================= */
+let VIEW="home", BANK=null, SES=null, DRAFT=null, CREATE={}, FILTER="all", EDIT=null, CONFIRM=null;
+const docsCache={}; // pdfs leídos (por pantalla de creación)
+
+function go(v,opts={}){
+  if(v==='settings'&&VIEW!=='settings'&&!opts.keepSet) SET=null;
+  if(VIEW==="quiz"&&SES&&!SES.done&&!opts.force){ askQuit(v); return; }
+  VIEW=v; EDIT=null; CONFIRM=null; render(); window.scrollTo({top:0});
+}
+function curBank(){return BANK&&S.banks[BANK];}
+
+/* ---------- configuración común de creación ---------- */
+function cfgDefaults(){return {materia:"",temas:[],n:50,prioridad:"",provider:S.prefs.provider||"gemini",model:"",baseUrl:"http://localhost:11434/v1",key:"",remember:true,sendPdf:true};}
+function cfgForm(c,prefix){
+  return `
+  <div class="grid2">
+    <label class="f">Materia<input type="text" id="${prefix}-materia" value="${esc(c.materia)}" placeholder="Ej. Administración Bancaria"></label>
+    <label class="f">Número de preguntas<select id="${prefix}-n">${[20,30,50,80,120].map(n=>`<option ${c.n==n?"selected":""}>${n}</option>`).join("")}</select></label>
+  </div>
+  <label class="f">Temas <span class="h">Opcional. Uno por renglón. Si lo dejas vacío, la IA usará el título de cada PDF.</span>
+    <textarea id="${prefix}-temas" rows="3" placeholder="Tema 6 - Operaciones y servicios&#10;Tema 7 - Operaciones de pasivo">${esc(c.temas.join("\n"))}</textarea></label>
+  <label class="f">Conceptos que quieres practicar más <span class="h">Opcional. Uno por renglón.</span>
+    <textarea id="${prefix}-prio" rows="2" placeholder="Diferencia entre crédito a plazo y revolvente">${esc(c.prioridad)}</textarea></label>`;
+}
+function readCfg(prefix,c){
+  c.materia=($("#"+prefix+"-materia")?.value||"").trim();
+  c.n=+($("#"+prefix+"-n")?.value||50);
+  c.temas=($("#"+prefix+"-temas")?.value||"").split("\n").map(s=>s.trim()).filter(Boolean);
+  c.prioridad=$("#"+prefix+"-prio")?.value||"";
+  return c;
+}
+function pdfDrop(id,docs,label="Elegir PDFs"){
+  return `<label class="drop" id="${id}-drop" for="${id}-input">
+    <input type="file" id="${id}-input" accept="application/pdf,.pdf" multiple>
+    <b>${label}</b><span class="small muted">Toca aquí o arrastra tus archivos PDF</span>
+    ${docs.length?`<div class="files">${docs.map((d,i)=>`<div class="file"><b>${esc(d.name)}</b><span class="small muted">${d.numPages} pág.</span>${d.lowText?'<span class="chip w">casi sin texto</span>':""}<button class="btn ghost sm" type="button" data-rmdoc="${id}:${i}" aria-label="Quitar ${esc(d.name)}">Quitar</button></div>`).join("")}</div>`:""}
+  </label>`;
+}
+
+/* =========================================================
+   VISTAS
+   ========================================================= */
+function vHome(){
+  const ids=S.order.filter(id=>S.banks[id]);
+  const banks=ids.map(id=>{const b=S.banks[id];const ex=b.stats.exams;const last=ex[ex.length-1];
+    return `<div class="card bank"><div class="t"><b>${esc(b.materia)}</b>
+      <span class="small muted">${b.preguntas.filter(q=>!q.dudosa).length} preguntas · ${b.temas.length} ${b.temas.length===1?"tema":"temas"}${last?` · último examen: ${last.score}/100`:""}</span></div>
+      <div class="row"><button class="btn primary" type="button" data-open="${id}">Estudiar</button></div></div>`;}).join("");
+  return `
+  <section class="hero">
+    <div class="eyebrow">Practica con tus propios apuntes</div>
+    <h1>Simulador de Examen</h1>
+    <p>Carga un banco de preguntas o crea uno desde tus PDF de estudio. Después practica con exámenes cronometrados por vidas, modo práctica y repaso de errores.</p>
+  </section>
+  <div class="stack">
+    ${ids.length?`<h2>Mis bancos</h2><div class="banks">${banks}</div><h2 style="margin-top:10px">Agregar otro banco</h2>`:`<div class="card stack-s"><h2>Aún no tienes bancos de preguntas</h2><p class="muted">Elige cómo quieres conseguir tus preguntas. Si alguien te compartió un archivo, usa la primera opción.</p></div>`}
+    ${waysHtml()}
+  </div>`;
+}
+function waysHtml(){
+  return `<div class="ways">
+    <button class="way" type="button" data-go="c-import"><span class="n">OPCIÓN 1</span><b>Cargar un banco que me compartieron</b><span class="d">Abre el archivo .json o .txt que te mandaron y empieza a estudiar.</span><span class="chips"><span class="chip g">Sin IA</span><span class="chip">Al instante</span><span class="chip">Sin internet</span></span></button>
+    <button class="way" type="button" data-go="c-copy"><span class="n">OPCIÓN 2</span><b>Crear con mi IA (copiar y pegar)</b><span class="d">Descarga unas instrucciones, dáselas a ChatGPT, Gemini, Copilot o Claude con tus PDF y carga lo que te devuelva.</span><span class="chips"><span class="chip g">Mejor calidad</span><span class="chip">Cualquier IA</span><span class="chip">Gratis</span></span></button>
+    <button class="way" type="button" data-go="c-key"><span class="n">OPCIÓN 3</span><b>Conectar mi IA con una clave</b><span class="d">Pega tu clave gratuita de Gemini u OpenRouter y la app genera las preguntas sola.</span><span class="chips"><span class="chip">Automático</span><span class="chip w">Requiere clave</span></span></button>
+    <button class="way" type="button" data-go="c-algo"><span class="n">OPCIÓN 4</span><b>Crear desde PDF sin IA</b><span class="d">La app arma preguntas básicas con los títulos y definiciones de tus PDF.</span><span class="chips"><span class="chip g">Sin IA</span><span class="chip w">Básico</span></span></button>
+  </div>`;
+}
+
+/* ---------- OPCIÓN 1 ---------- */
+function vImport(){
+  return `
+  <section class="hero"><div class="eyebrow">Opción 1 · Sin IA</div><h1 style="font-size:36px">Cargar un banco de preguntas</h1>
+    <p>Un banco es un archivo con preguntas, respuestas y explicaciones que alguien ya preparó, por ejemplo un compañero o tu profesor. Lo cargas una vez y queda guardado en este navegador.</p></section>
+  <div class="stack">
+    ${importBox("imp")}
+  </div>`;
+}
+function importBox(id,extra=""){
+  return `<div class="card stack">
+    <label class="drop" id="${id}-fdrop" for="${id}-file"><input type="file" id="${id}-file" accept=".json,.txt,application/json,text/plain" multiple>
+      <b>Elegir archivo del banco</b><span class="small muted">.json o .txt · puedes elegir varios si la IA lo entregó en partes</span></label>
+    <details ${CREATE.pasteOpen?"open":""} id="${id}-det"><summary>O pega el texto aquí</summary>
+      <div class="stack-s" style="margin-top:10px">
+        <textarea id="${id}-paste" rows="7" placeholder='Pega la respuesta completa de la IA. Si vino en varias partes, pega una debajo de otra.'>${esc(CREATE.pasteText||"")}</textarea>
+        <div class="row"><button class="btn" type="button" data-act="${id}-parse">Leer texto pegado</button></div>
+      </div></details>
+    ${extra}
+    <p class="note" id="${id}-msg" ${CREATE.importMsg?"":"hidden"}>${CREATE.importMsg||""}</p>
+  </div>`;
+}
+
+/* ---------- OPCIÓN 2 ---------- */
+function vCopy(){
+  const c=CREATE.cfg2||(CREATE.cfg2=cfgDefaults());
+  const docs=docsCache.copy||[];
+  return `
+  <section class="hero"><div class="eyebrow">Opción 2 · Con la IA que tú quieras</div><h1 style="font-size:36px">Crear con mi IA</h1>
+    <p>La app te da unas instrucciones detalladas. Tú se las das a tu IA junto con tus PDF, y ella te devuelve un archivo que cargas aquí. Funciona con ChatGPT, Gemini, Copilot, Claude y otras, incluso en su versión gratis.</p></section>
+  <div class="steps">
+    <div class="step"><div class="card stack"><h3>Datos del banco</h3>${cfgForm(c,"c2")}</div></div>
+    <div class="step"><div class="card stack"><h3>Descarga las instrucciones</h3>
+      <p class="muted small">Es un archivo de texto que le explica a la IA exactamente qué hacer y en qué formato responder.</p>
+      <div class="row"><button class="btn primary" type="button" data-act="c2-dl">Descargar instrucciones (.txt)</button><button class="btn" type="button" data-act="c2-copy">Copiar instrucciones</button></div>
+      <details><summary>Ver las instrucciones</summary><div class="code" style="margin-top:8px" id="c2-preview">${esc(buildPrompt(c))}</div></details>
+    </div></div>
+    <div class="step"><div class="card stack"><h3>Dáselas a tu IA</h3>
+      <ol class="small" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:4px">
+        <li>Abre un <b>chat nuevo</b> en tu IA.</li>
+        <li>Adjunta tus <b>PDF de estudio</b> y el archivo <b>instrucciones</b> que descargaste.</li>
+        <li>Escribe este mensaje y envíalo:</li>
+      </ol>
+      <div class="code">Te adjunto mis PDF de estudio y un archivo de instrucciones. Sigue las instrucciones del archivo al pie de la letra.</div>
+      <div class="row"><button class="btn sm" type="button" data-act="c2-copymsg">Copiar mensaje</button></div>
+      <div class="note small"><b>Si tu IA no deja adjuntar el .txt:</b> usa «Copiar instrucciones» y pégalas en el chat junto con tus PDF.<br><b>Si la respuesta llega en partes:</b> escribe CONTINUAR hasta recibir todas.<br><b>Tarda</b> de 1 a 3 minutos según el tamaño de tus PDF.</div>
+    </div></div>
+    <div class="step"><div class="stack">
+      <div class="card stack-s"><h3>Carga lo que te dio la IA</h3><p class="small muted">Descarga el archivo .json que te entregó, o copia el bloque de texto. Puedes cargar varias partes juntas.</p></div>
+      ${importBox("c2",`<details ${docs.length?"open":""}><summary>Opcional: verificar contra mis PDF</summary>
+        <div class="stack-s" style="margin-top:10px"><p class="small muted">Si cargas aquí los mismos PDF, la app revisa que la frase de cada pregunta exista de verdad en tu material y marca las que podrían ser inventadas. Necesita internet la primera vez.</p>
+        ${pdfDrop("copy",docs,"Elegir los mismos PDF")}</div></details>`)}
+    </div></div>
+  </div>`;
+}
+
+/* ---------- OPCIÓN 3 ---------- */
+function aiSummary(){
+  const a=aiCfg(),P=PROVIDERS[a.provider],v=S.ai.verified[a.provider];
+  const hasKey=a.provider==="custom"||!!a.key;
+  if(!hasKey) return `<div class="card stack-s"><h3>Primero configura tu IA</h3><p class="small muted">Solo una vez: eliges tu IA, pegas tu clave gratuita y la pruebas. Toma unos 5 minutos.</p><div class="row"><button class="btn primary" type="button" data-act="to-settings">Configurar mi IA</button></div></div>`;
+  return `<div class="card bank"><div class="t"><span class="eyebrow">Tu IA</span><b style="font-size:19px">${esc(P.name)}</b>
+    <span class="small muted">Modelo: ${esc(a.model||"—")} · ${v?.ok?`<span style="color:var(--good)">✓ Clave verificada</span>`:"Clave sin probar"}</span></div>
+    <button class="btn sm" type="button" data-act="to-settings">Cambiar</button></div>`;
+}
+function vKey(){
+  const c=CREATE.cfg3||(CREATE.cfg3=cfgDefaults());
+  const docs=docsCache.key||[], busy=CREATE.busy;
+  return `
+  <section class="hero"><div class="eyebrow">Opción 3 · Automático</div><h1 style="font-size:36px">Conectar mi IA con una clave</h1>
+    <p>La app le pide las preguntas a tu IA por ti, con tu propia clave gratuita. Tú no copias ni pegas nada.</p></section>
+  <div class="stack">
+    ${EMBEDDED?`<div class="note w small"><b>Esta opción no funcionará aquí.</b> ${EMBED_MSG}</div>`:""}
+    ${aiSummary()}
+    <div class="card stack">${cfgForm(c,"c3")}${pdfDrop("key",docs)}</div>
+    <div class="card stack">
+      <div class="row"><button class="btn primary" type="button" data-act="k-run" ${busy?"disabled":""}>${busy?"Generando…":"Generar preguntas"}</button>${busy?`<button class="btn ghost" type="button" data-act="k-stop">Detener</button>`:""}</div>
+      <div class="progress" id="k-prog">${CREATE.progHtml||""}</div>
+    </div>
+  </div>`;
+}
+
+/* ---------- CONFIGURACIÓN ---------- */
+let SET=null;
+function setFromStore(){const a=S.ai;SET={provider:a.provider,keys:{...a.keys,...SESSION_KEYS},models:{...a.models},baseUrl:a.baseUrl,remember:a.remember,sendPdf:a.sendPdf,test:{},modelList:{}};}
+function readSet(){
+  if(!SET||!$("#s-provider")) return;
+  const p=SET.provider;
+  SET.keys[p]=($("#s-key")?.value||"").trim();
+  SET.models[p]=($("#s-model")?.value||"").trim();
+  if($("#s-base")) SET.baseUrl=$("#s-base").value.trim();
+  SET.remember=$("#s-remember")?.checked??true;
+  if($("#s-sendpdf")) SET.sendPdf=$("#s-sendpdf").checked;
+}
+function testHtml(t){
+  if(!t) return "";
+  const cls=t.status==="ok"?"g":t.status==="busy"?"":t.status==="warn"?"w":"b";
+  return `<p class="note small ${cls}" role="status">${t.status==="busy"?"Probando la clave…":t.msg}</p>`;
+}
+function vSettings(){
+  if(!SET) setFromStore();
+  const p=SET.provider,P=PROVIDERS[p];
+  const models=SET.modelList[p]||(p==="gemini"?P.models:[]);
+  return `
+  <section class="hero"><div class="eyebrow">Configuración</div><h1 style="font-size:38px">Tu IA</h1>
+    <p>Se usa en la opción 3 para crear preguntas automáticamente. Lo configuras una vez y queda guardado en este navegador.</p></section>
+  <div class="stack">
+    ${EMBEDDED?`<div class="note w small"><b>Ojo:</b> ${EMBED_MSG}</div>`:""}
+    <div class="card stack">
+      <label class="f">Proveedor<select id="s-provider">${Object.entries(PROVIDERS).map(([k,v])=>`<option value="${k}" ${p===k?"selected":""}>${v.name}</option>`).join("")}</select></label>
+      ${p==="gemini"?`<p class="small">Cómo sacar tu clave gratis: 1) Entra a <a href="${P.keyUrl}" target="_blank" rel="noopener">aistudio.google.com/apikey</a> con tu cuenta de Google · 2) «Create API key» · 3) Cópiala y pégala abajo. No piden tarjeta.</p>`:""}
+      ${p==="openrouter"?`<p class="small">Cómo sacar tu clave: 1) Crea tu cuenta en <a href="https://openrouter.ai" target="_blank" rel="noopener">openrouter.ai</a> · 2) En <a href="${P.keyUrl}" target="_blank" rel="noopener">openrouter.ai/keys</a> crea una clave · 3) Pégala abajo y elige un modelo gratuito (terminan en «:free»).</p>`:""}
+      ${p==="custom"?`<label class="f">Dirección del servicio <span class="h">Compatible con OpenAI. Ej. Groq: https://api.groq.com/openai/v1 · Ollama en tu computadora: http://localhost:11434/v1</span><input type="text" id="s-base" value="${esc(SET.baseUrl)}"></label>`:""}
+      <label class="f" for="s-key">Clave <span class="h">${p==="custom"?"Déjala vacía si tu servicio no la pide (por ejemplo, Ollama).":p==="gemini"?"Empieza con «AIza».":"Empieza con «sk-or-»."}</span></label>
+      <div class="row" style="flex-wrap:nowrap"><input type="password" id="s-key" value="${esc(SET.keys[p]||"")}" autocomplete="off" spellcheck="false" style="flex:1">
+        <button class="btn" type="button" data-act="s-test">Probar clave</button></div>
+      <div id="s-test">${testHtml(SET.test[p])}</div>
+      <label class="row small" style="gap:8px"><input type="checkbox" id="s-remember" ${SET.remember?"checked":""}> Recordar mi clave en este navegador</label>
+      <label class="f">Modelo <span class="h">${p==="gemini"?"Puedes dejar el que viene.":p==="openrouter"?"Al probar la clave aparece la lista de modelos gratuitos.":"Nombre exacto del modelo en tu servicio."}</span>
+        <input type="text" id="s-model" value="${esc(SET.models[p]||P.model)}" list="s-models"><datalist id="s-models">${models.map(m=>`<option value="${esc(m)}"></option>`).join("")}</datalist></label>
+      ${p==="gemini"?`<label class="row small" style="gap:8px"><input type="checkbox" id="s-sendpdf" ${SET.sendPdf?"checked":""}> Enviar los PDF completos (Gemini puede leer imágenes y tablas)</label>`:""}
+      <div class="row"><button class="btn primary" type="button" data-act="s-save">${CREATE.backTo==="c-key"?"Guardar y volver":"Guardar"}</button>${S.ai.keys[p]?`<button class="btn ghost danger" type="button" data-act="s-forget">Borrar mi clave</button>`:""}</div>
+    </div>
+    <div class="card stack-s">
+      <h3>Cómo funciona</h3>
+      <ul class="small" style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:3px">
+        <li>Tu clave se guarda solo en este navegador y solo se usa para hablar con la IA que elegiste.</li>
+        <li>Al generar, la app envía tus PDF (o su texto) a esa IA y recibe las preguntas ya en el formato del simulador.</li>
+        <li>Cada pregunta trae la frase del PDF que la respalda y la app la verifica sola.</li>
+      </ul>
+      <div class="note small"><b>Ten en cuenta:</b> en las versiones gratuitas, el proveedor puede usar lo que envías para mejorar sus modelos, y hay un límite diario de uso. Si algo falla, la opción 2 (copiar y pegar) funciona con la misma IA.</div>
+    </div>
+  </div>`;
+}
+async function testKey(){
+  readSet(); const p=SET.provider,key=SET.keys[p],P=PROVIDERS[p];
+  const put=t=>{SET.test[p]=t;const el=$("#s-test");if(el)el.innerHTML=testHtml(t);};
+  if(p!=="custom"&&!key) return put({status:"bad",msg:"Pega tu clave primero."});
+  put({status:"busy"});
+  let r,j=null;
+  try{
+    if(p==="gemini") r=await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1000",{headers:{"x-goog-api-key":key}});
+    else if(p==="openrouter") r=await fetch("https://openrouter.ai/api/v1/key",{headers:{Authorization:"Bearer "+key}});
+    else r=await fetch(SET.baseUrl.replace(/\/+$/,"")+"/models",{headers:key?{Authorization:"Bearer "+key}:{}});
+    try{j=await r.json();}catch(e){}
+  }catch(e){
+    return put({status:"bad",msg:EMBEDDED?`<b>No se pudo probar.</b> ${EMBED_MSG}`:`<b>No se pudo conectar con ${esc(P.name)}.</b> Revisa tu conexión a internet. Si el problema sigue, puede que el servicio no permita conexiones desde una página; en ese caso usa la opción 2.`});
+  }
+  if(!r.ok){
+    const m=j?.error?.message||j?.message||("Error "+r.status);
+    if([400,401,403].includes(r.status)) return put({status:"bad",msg:`<b>✗ La clave no funciona.</b> Revisa que la copiaste completa, sin espacios. Detalle: ${esc(m)}`});
+    if(r.status===429) return put({status:"warn",msg:`<b>La clave es válida, pero llegaste al límite de uso por ahora.</b> Intenta más tarde.`});
+    return put({status:"bad",msg:`<b>✗ No se pudo verificar.</b> ${esc(m)}`});
+  }
+  let models=[],extra="";
+  if(p==="gemini"){
+    models=(j?.models||[]).filter(m=>(m.supportedGenerationMethods||[]).includes("generateContent")).map(m=>m.name.replace(/^models\//,""))
+      .filter(n=>/gemini/.test(n)&&!/embedding|tts|image|live|audio/.test(n)).sort((a,b)=>(/flash/.test(b)-/flash/.test(a))||a.localeCompare(b));
+    extra=` ${models.length} modelos disponibles.`;
+  }else if(p==="openrouter"){
+    const d=j?.data||{}; extra=d.is_free_tier?" Cuenta gratuita: usa modelos que terminan en «:free».":"";
+    try{const mr=await fetch("https://openrouter.ai/api/v1/models");const mj=await mr.json();models=(mj.data||[]).map(x=>x.id).filter(id=>/:free$/.test(id)).sort();extra+=` ${models.length} modelos gratuitos disponibles.`;}catch(e){}
+  }else{ models=(j?.data||[]).map(x=>x.id).filter(Boolean); if(models.length) extra=` ${models.length} modelos disponibles.`; }
+  SET.modelList[p]=models;
+  const cur=($("#s-model")?.value||"").trim();
+  let warn="";
+  if(models.length&&cur&&!models.includes(cur)&&!(p==="gemini"&&/-latest$/.test(cur))){ warn=` <br>El modelo «${esc(cur)}» no aparece en la lista; elige uno de la lista del campo Modelo.`; }
+  S.ai.verified[p]={ok:true,ts:Date.now()};
+  readSet(); render();
+  put({status:warn?"warn":"ok",msg:`<b>✓ La clave funciona.</b>${esc(extra)}${warn}`});
+}
+function saveSettings(){
+  readSet(); const a=S.ai;
+  a.provider=SET.provider; a.models={...SET.models}; a.baseUrl=SET.baseUrl; a.remember=SET.remember; a.sendPdf=SET.sendPdf;
+  for(const [p,k] of Object.entries(SET.keys)){ if(SET.remember){ if(k) a.keys[p]=k; else delete a.keys[p]; delete SESSION_KEYS[p]; } else { delete a.keys[p]; if(k) SESSION_KEYS[p]=k; } }
+  save(); toast("Configuración guardada");
+  const back=CREATE.backTo; CREATE.backTo=null; SET=null;
+  go(back||"settings");
+}
+
+/* ---------- OPCIÓN 4 ---------- */
+function vAlgo(){
+  const docs=docsCache.algo||[];
+  const c=CREATE.cfg4||(CREATE.cfg4=cfgDefaults());
+  return `
+  <section class="hero"><div class="eyebrow">Opción 4 · Sin IA</div><h1 style="font-size:36px">Crear desde PDF sin IA</h1>
+    <p>La app busca en tus PDF los títulos con su definición, las siglas y las listas, y con eso arma preguntas. Todo pasa en tu navegador; tus archivos no se envían a ningún lado.</p></section>
+  <div class="stack">
+    <div class="note w"><b>Antes de usarlo, ten en cuenta sus límites:</b>
+      <ul>
+        <li><b>No lee imágenes.</b> Diagramas, capturas, fotos y PDF escaneados se ignoran.</li>
+        <li><b>Las tablas y las columnas pueden salir revueltas.</b> A veces mezcla el texto de dos columnas.</li>
+        <li><b>Solo hace preguntas de memoria:</b> definiciones, siglas, listas y verdadero/falso. No crea casos prácticos ni preguntas de diferencias.</li>
+        <li><b>Las explicaciones son la frase del PDF</b>, no una explicación con otras palabras.</li>
+        <li>Con diapositivas, más o menos <b>la mitad de las preguntas salen bien</b>. Revísalas antes de guardar.</li>
+      </ul>
+      <p class="small" style="margin-top:6px">Funciona mejor con PDF que tienen títulos claros y su explicación justo debajo.</p></div>
+    <div class="card stack">
+      <label class="f">Materia<input type="text" id="c4-materia" value="${esc(c.materia)}" placeholder="Ej. Administración Bancaria"></label>
+      ${pdfDrop("algo",docs)}
+      <p class="small muted">Cada PDF se usa como un tema. Necesita internet la primera vez para cargar el lector de PDF.</p>
+      <div class="row"><button class="btn primary" type="button" data-act="a-run" ${docs.length?"":"disabled"}>Crear preguntas</button></div>
+      <p class="note" id="a-msg" ${CREATE.algoMsg?"":"hidden"}>${CREATE.algoMsg||""}</p>
+    </div>
+  </div>`;
+}
+
+/* ---------- REVISIÓN ---------- */
+function verifChip(q){
+  if(q.verif==="ok") return `<span class="chip g">✓ Verificada en el PDF</span>`;
+  if(q.verif==="no") return `<span class="chip b">⚠ Frase no encontrada en el PDF</span>`;
+  if(q.verif==="sinfuente") return `<span class="chip w">Sin frase de respaldo</span>`;
+  return `<span class="chip">Sin verificar</span>`;
+}
+function vReview(){
+  const d=DRAFT; if(!d) return vHome();
+  const all=d.preguntas;
+  const cnt={all:all.length,ok:all.filter(q=>q.verif==="ok").length,no:all.filter(q=>q.verif==="no").length,
+    nov:all.filter(q=>!q.verif||q.verif==="sinfuente").length,off:all.filter(q=>q._off).length};
+  const list=all.filter(q=> FILTER==="all"||(FILTER==="ok"&&q.verif==="ok")||(FILTER==="no"&&q.verif==="no")||(FILTER==="nov"&&(!q.verif||q.verif==="sinfuente"))||(FILTER==="off"&&q._off));
+  const included=all.length-cnt.off;
+  const existing=S.order.filter(id=>S.banks[id]);
+  const editingBank=d.bankId&&S.banks[d.bankId];
+  return `
+  <section class="hero"><div class="eyebrow">${editingBank?"Editar banco":"Revisión antes de guardar"}</div><h1 style="font-size:36px">${editingBank?esc(editingBank.materia):"Revisa tus preguntas"}</h1>
+    <p>${editingBank?"Corrige, quita o restaura preguntas. Las que marcaste como dudosas aparecen como quitadas.":"Quita las que no te convenzan y corrige lo que haga falta. Solo se guardan las que dejes incluidas."}</p></section>
+  <div class="stack">
+    <div class="card stack">
+      ${editingBank?"":`<div class="grid2">
+        <label class="f">Nombre del banco (materia)<input type="text" id="r-materia" value="${esc(d.materia)}" placeholder="Ej. Administración Bancaria"></label>
+        <label class="f">Guardar en<select id="r-target"><option value="">Un banco nuevo</option>${existing.map(id=>`<option value="${id}">Agregar a: ${esc(S.banks[id].materia)}</option>`).join("")}</select></label>
+      </div>`}
+      <div class="row"><button class="btn primary" type="button" data-act="r-save" ${included?"":"disabled"}>${editingBank?"Guardar cambios":`Guardar ${included} preguntas y empezar`}</button><button class="btn ghost" type="button" data-act="r-cancel">Cancelar</button></div>
+    </div>
+    ${d.descartadas?.length?`<div class="note w small">${d.descartadas.length===1?"1 pregunta no se pudo leer y se omitió":d.descartadas.length+" preguntas no se pudieron leer y se omitieron"} (${esc([...new Set(d.descartadas.map(x=>x.motivo))].join("; "))}).</div>`:""}
+    ${cnt.no?`<div class="note b small"><b>${cnt.no} ${cnt.no===1?"pregunta tiene":"preguntas tienen"} una frase de respaldo que no aparece en tus PDF.</b> Puede que la IA la haya inventado, o que venga de una imagen o tabla. Revísalas. <button class="link" type="button" data-act="r-offno">Quitar todas esas</button></div>`:""}
+    ${!all.some(q=>q.verif)&&!editingBank?`<div class="note small">${d.src==="c2"?"Estas preguntas no se verificaron contra tus PDF. Si quieres, vuelve al paso anterior y carga los mismos PDF en «Verificar contra mis PDF».":"Este banco se cargó tal como te lo compartieron. Si viene de alguien de confianza, puedes guardarlo directamente."}</div>`:""}
+    <div class="filters" role="group" aria-label="Filtrar">
+      ${[["all","Todas",cnt.all],["ok","Verificadas",cnt.ok],["no","No encontradas",cnt.no],["nov","Sin verificar",cnt.nov],["off","Quitadas",cnt.off]].filter(f=>f[0]==="all"||f[2]).map(f=>`<button type="button" class="${FILTER===f[0]?"on":""}" data-filter="${f[0]}">${f[1]} · ${f[2]}</button>`).join("")}
+    </div>
+    <div class="stack-s">${list.map(q=>EDIT===q.id?editForm(q,d):reviewItem(q)).join("")||'<div class="card empty">No hay preguntas en este filtro.</div>'}</div>
+    <div class="row" style="justify-content:flex-end"><button class="btn primary" type="button" data-act="r-save" ${included?"":"disabled"}>${editingBank?"Guardar cambios":`Guardar ${included} preguntas y empezar`}</button></div>
+  </div>`;
+}
+function reviewItem(q){
+  return `<article class="card rq ${q._off?"off":""}">
+    <div class="chips"><span class="chip">${esc(q.tema)}</span><span class="chip">${DIF[q.dificultad]}</span>${verifChip(q)}</div>
+    <div class="q">${esc(q.pregunta)}</div>
+    <ul class="ans"><li class="c">${esc(q.correcta)}</li>${q.incorrectas.map(x=>`<li class="x">${esc(x)}</li>`).join("")}</ul>
+    ${q.explicacion?`<div class="exp">${esc(q.explicacion)}</div>`:""}
+    ${q.fuente?`<p class="src">Fuente${q.pagina?` (pág. ${q.pagina})`:""}: «${esc(q.fuente)}»</p>`:""}
+    <div class="row"><button class="btn sm" type="button" data-edit="${q.id}">Editar</button><button class="btn sm ${q._off?"":"danger"}" type="button" data-toggle="${q.id}">${q._off?"Volver a incluir":"Quitar"}</button></div>
+  </article>`;
+}
+function editForm(q,d){
+  return `<article class="card stack">
+    <label class="f">Pregunta<textarea id="e-preg" rows="3">${esc(q.pregunta)}</textarea></label>
+    <label class="f">Respuesta correcta<input type="text" id="e-corr" value="${esc(q.correcta)}"></label>
+    ${[0,1,2].map(i=>`<label class="f">Respuesta incorrecta ${i+1}<input type="text" id="e-inc${i}" value="${esc(q.incorrectas[i]||"")}"></label>`).join("")}
+    <label class="f">Explicación<textarea id="e-exp" rows="2">${esc(q.explicacion)}</textarea></label>
+    <div class="grid2"><label class="f">Tema<input type="text" id="e-tema" value="${esc(q.tema)}" list="e-temas"><datalist id="e-temas">${d.temas.map(t=>`<option value="${esc(t)}"></option>`).join("")}</datalist></label>
+      <label class="f">Dificultad<select id="e-dif">${[1,2,3].map(k=>`<option value="${k}" ${q.dificultad===k?"selected":""}>${DIF[k]}</option>`).join("")}</select></label></div>
+    <div class="row"><button class="btn primary" type="button" data-act="e-save">Guardar</button><button class="btn ghost" type="button" data-act="e-cancel">Cancelar</button></div>
+  </article>`;
+}
+
+/* ---------- BANCO (inicio de estudio) ---------- */
+function vBank(){
+  const b=curBank(); if(!b) return vHome();
+  const pool=b.preguntas.filter(q=>!q.dudosa);
+  const nErr=Object.keys(b.stats.errors).filter(id=>pool.some(q=>q.id===id)).length;
+  const sel=b.sel&&b.sel.length?b.sel:b.temas;
+  const cnt=t=>pool.filter(q=>q.tema===t).length;
+  return `
+  <section class="hero"><div class="eyebrow">Banco de preguntas</div><h1>${esc(b.materia)}</h1>
+    <p>${pool.length} preguntas · ${b.temas.length} ${b.temas.length===1?"tema":"temas"}</p></section>
+  <div class="stack">
+    ${b.temas.length>1?`<div class="card"><h3>Temas a evaluar</h3><div class="temas">
+      <label class="chk"><input type="checkbox" id="t-all" ${sel.length===b.temas.length?"checked":""}><span><b>Todos</b><em>${pool.length} preguntas</em></span></label>
+      ${b.temas.map((t,i)=>`<label class="chk"><input type="checkbox" data-tema="${i}" id="t-${i}" ${sel.includes(t)?"checked":""}><span><b>${esc(t)}</b><em>${cnt(t)} preguntas</em></span></label>`).join("")}
+    </div><p class="note w small" id="t-note" style="margin-top:10px" hidden></p></div>`:""}
+    <div class="modes">${[[10,"Examen rápido"],[20,"Examen normal"],[30,"Examen completo"]].map(([n,k])=>`<button class="mode" type="button" data-exam="${n}"><span class="k">${k}</span><span class="n num">${n}</span><span class="d">preguntas · 3 vidas</span></button>`).join("")}</div>
+    <div class="grid2">
+      <button class="mode alt" type="button" data-act="practice"><span class="t"><b>Modo práctica</b><span class="d">Sin vidas, con explicación en cada respuesta</span></span></button>
+      ${nErr?`<button class="mode alt" type="button" data-act="review-errors"><span class="t"><b>Repasar mis errores</b><span class="d">Empieza por lo que más has fallado</span></span><span class="badge num">${nErr}</span></button>`
+            :`<button class="mode alt" type="button" data-go="stats"><span class="t"><b>Estadísticas</b><span class="d">Aún no tienes errores guardados</span></span></button>`}
+    </div>
+    <div class="row">
+      <button class="btn sm" type="button" data-go="errors">Mis errores</button>
+      <button class="btn sm" type="button" data-go="stats">Estadísticas</button>
+      <button class="btn sm" type="button" data-act="b-edit">Editar preguntas</button>
+      <button class="btn sm" type="button" data-act="b-export">Compartir banco (.json)</button>
+      <button class="btn sm danger" type="button" data-act="b-del">Eliminar banco</button>
+    </div>
+    <div id="b-confirm"></div>
+    <p class="foot">En los exámenes tienes 3 vidas: cada respuesta incorrecta te quita una y, si las pierdes todas, el examen termina. Tu progreso se guarda solo en este navegador.</p>
+  </div>`;
+}
+
+/* ---------- motor de examen ---------- */
+function inst(q){
+  const tf=q.tipo==="verdadero_falso"||(/^(Verdadero|Falso)$/.test(q.correcta)&&q.incorrectas.length===1);
+  const opts=tf?["Verdadero","Falso"]:shuffle([q.correcta,...q.incorrectas]);
+  return {id:q.id,opts,ci:opts.indexOf(q.correcta),pick:null};
+}
+function poolOf(b){const sel=b.sel&&b.sel.length?b.sel:b.temas;return b.preguntas.filter(q=>!q.dudosa&&sel.includes(q.tema));}
+function pickQs(b,n){
+  const pool=poolOf(b); n=Math.min(n,pool.length);
+  const recent=new Set(b.stats.recent);
+  const order=a=>{const s=shuffle(a);return [...s.filter(q=>!recent.has(q.id)),...s.filter(q=>recent.has(q.id))]};
+  const want={1:Math.round(n*.3),3:Math.round(n*.25)}; want[2]=n-want[1]-want[3];
+  const out=[],used=new Set();
+  for(const k of [1,2,3]) for(const q of order(pool.filter(q=>q.dificultad===k))){ if(want[k]<=0)break; out.push(q);used.add(q.id);want[k]--; }
+  for(const q of order(pool)){ if(out.length>=n)break; if(!used.has(q.id)){out.push(q);used.add(q.id);} }
+  return shuffle(out);
+}
+const qById=(b,id)=>b.preguntas.find(q=>q.id===id);
+function startExam(n){
+  const b=curBank(); const qs=pickQs(b,n);
+  if(!qs.length){ const nt=$("#t-note"); if(nt){nt.hidden=false;nt.textContent="Selecciona al menos un tema con preguntas.";} return; }
+  if(qs.length<n) toast(`Los temas elegidos tienen ${qs.length} preguntas; el examen tendrá ${qs.length}.`);
+  SES={mode:"exam",n,items:qs.map(inst),i:0,done:false,answered:false,lives:MAXLIVES};
+  VIEW="quiz";render();window.scrollTo({top:0});
+}
+function startPractice(){
+  const b=curBank(); const pool=poolOf(b);
+  if(!pool.length){ const nt=$("#t-note"); if(nt){nt.hidden=false;nt.textContent="Selecciona al menos un tema con preguntas.";} return; }
+  const recent=new Set(b.stats.recent); const s=shuffle(pool);
+  SES={mode:"practice",items:[...s.filter(q=>!recent.has(q.id)),...s.filter(q=>recent.has(q.id))].map(inst),i:0,answered:false};
+  VIEW="quiz";render();window.scrollTo({top:0});
+}
+function startReview(ids){
+  const b=curBank();
+  let list=ids;
+  if(!list){
+    const errs=Object.entries(b.stats.errors).filter(([id])=>{const q=qById(b,id);return q&&!q.dudosa;}).sort((a,c)=>(a[1].resolved-c[1].resolved)||(c[1].count-a[1].count));
+    list=errs.slice(0,15).map(e=>e[0]);
+    if(list.length<10){ const cs=new Set(list.map(id=>qById(b,id)?.concepto).filter(Boolean)); for(const q of shuffle(b.preguntas)){ if(list.length>=10)break; if(!q.dudosa&&cs.has(q.concepto)&&!list.includes(q.id)) list.push(q.id);} }
+  }
+  list=list.filter(id=>qById(b,id)); if(!list.length) return;
+  SES={mode:"review",items:shuffle(list).map(id=>inst(qById(b,id))),i:0,answered:false};
+  VIEW="quiz";render();window.scrollTo({top:0});
+}
+function record(it){
+  const b=curBank(),q=qById(b,it.id); if(!q) return; const ok=it.pick===it.ci;
+  const st=b.stats; st.tema[q.tema]=st.tema[q.tema]||{c:0,t:0}; st.tema[q.tema].t++; if(ok)st.tema[q.tema].c++;
+  const e=st.errors[q.id];
+  if(!ok) st.errors[q.id]={count:(e?.count||0)+1,last:it.opts[it.pick],resolved:false,ts:Date.now()}; else if(e) e.resolved=true;
+  if(!st.recent.includes(q.id)) st.recent.push(q.id);
+  const cap=Math.max(20,Math.floor(b.preguntas.length*.6)); if(st.recent.length>cap) st.recent=st.recent.slice(-cap);
+}
+function choose(k){
+  const it=SES.items[SES.i]; if(SES.answered) return;
+  it.pick=k; SES.answered=true; record(it);
+  if(SES.mode==="exam"&&k!==it.ci){SES.lives--;SES.lostAt=SES.i;}
+  save(); render(); const fb=$("#fb"); if(fb) fb.scrollIntoView({block:"nearest",behavior:"smooth"});
+}
+function next(){
+  if(!SES.answered) return;
+  if(SES.mode==="exam"){ if(SES.lives<=0||SES.i>=SES.items.length-1) return finishExam(); }
+  else if(SES.i>=SES.items.length-1) return finishPractice();
+  SES.i++;SES.answered=false;render();window.scrollTo({top:0});
+}
+function finishExam(){
+  const b=curBank(); SES.gameOver=SES.lives<=0;
+  const c=SES.items.filter(x=>x.pick===x.ci).length,n=SES.items.length;
+  b.stats.exams.push({ts:Date.now(),n,c,score:Math.round(c/n*100),lives:SES.lives});
+  save(); SES.done=true; VIEW="results"; render(); window.scrollTo({top:0});
+}
+function finishPractice(){ SES.items=SES.items.slice(0,SES.answered?SES.i+1:SES.i); SES.done=true; VIEW="results"; render(); window.scrollTo({top:0}); }
+function verdict(s){if(s>=90)return["Excelente","v-ex"];if(s>=80)return["Muy bien","v-mb"];if(s>=70)return["Bien","v-b"];return["Necesitas repasar","v-r"];}
+
+function vQuiz(){
+  const b=curBank(),s=SES,it=s.items[s.i],q=qById(b,it.id),n=s.items.length;
+  const exam=s.mode==="exam",answered=s.answered;
+  const pct=Math.round((s.i+(answered?1:0))/n*100);
+  const label=exam?"Modo examen":s.mode==="review"?"Repaso de errores":"Modo práctica";
+  const opts=it.opts.map((o,k)=>{let cls="";if(answered){if(k===it.ci)cls="ok";else if(k===it.pick)cls="no";}
+    const mark=answered&&k===it.ci?`<span class="mk ok">Correcta</span>`:answered&&k===it.pick?`<span class="mk no">Tu respuesta</span>`:"";
+    return `<button class="opt ${cls}" type="button" data-opt="${k}" ${answered?"disabled":""}><span class="l">${L[k]}</span><span>${esc(o)}${mark}</span></button>`;}).join("");
+  let fb="";
+  if(answered){const ok=it.pick===it.ci;
+    const life=exam&&!ok?(s.lives>0?`<p>Pierdes una vida. Te ${s.lives===1?"queda 1 vida":"quedan "+s.lives+" vidas"}.</p>`:`<p><b>Te quedaste sin vidas.</b> El examen termina aquí.</p>`):"";
+    const src=q.fuente?`<p class="src">Fuente${q.pagina?` (pág. ${q.pagina})`:""}: «${esc(q.fuente)}»</p>`:"";
+    const flag=`<button class="link small" type="button" data-act="flag" style="align-self:flex-start">Esta pregunta está mal o es dudosa</button>`;
+    fb=ok?`<div class="fb ok" id="fb" role="status"><h3>✓ Correcto</h3>${q.explicacion?`<p>${esc(q.explicacion)}</p>`:""}${src}${flag}</div>`
+         :`<div class="fb no" id="fb" role="status"><h3>✗ Incorrecto</h3><p><b>Respuesta correcta:</b> ${L[it.ci]}) ${esc(it.opts[it.ci])}</p>${q.explicacion?`<p><b>¿Por qué?</b> ${esc(q.explicacion)}</p>`:""}${src}${life}${flag}</div>`;}
+  const last=s.i===n-1,over=exam&&s.lives<=0;
+  const nextLabel=exam?(over?"Ver resultados":last?"Terminar examen":"Siguiente pregunta"):(last?"Ver resumen":"Siguiente pregunta");
+  const hearts=exam?`<span class="lives" aria-label="Vidas: ${s.lives} de ${MAXLIVES}">${Array.from({length:MAXLIVES},(_,k)=>`<svg class="heart ${k<s.lives?"on":"off"}" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 21s-7.5-4.6-9.6-9.3C.9 8.2 3 4.5 6.6 4.5c2.1 0 3.6 1.1 4.4 2.5.8-1.4 2.3-2.5 4.4-2.5 3.6 0 5.7 3.7 4.2 7.2C19.5 16.4 12 21 12 21z"/></svg>`).join("")}</span>`:"";
+  return `
+  <section class="stack" style="padding-top:22px">
+    <div><div class="qhead"><span class="eyebrow">${label}</span>${hearts}<span class="qcount num" style="${exam?"":"margin-left:auto"}">Pregunta ${s.i+1} de ${n}</span></div>
+      <div class="bar" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100"><i style="width:${pct}%"></i></div></div>
+    <div class="card stack">
+      <div class="chips"><span class="chip">${esc(q.tema)}</span><span class="chip">${DIF[q.dificultad]}</span></div>
+      <p class="qtext">${esc(q.pregunta)}</p>
+      <div class="opts">${opts}</div>
+      ${fb}
+    </div>
+    <div class="actions"><button class="btn ghost" type="button" data-act="quit">${exam?"Salir del examen":"Terminar práctica"}</button>
+      <button class="btn primary" type="button" data-act="next" ${answered?"":"disabled"}>${nextLabel}</button></div>
+    <div id="quitbox"></div>
+  </section>`;
+}
+function askQuit(target,summary){
+  const box=$("#quitbox"); if(!box) return;
+  const exam=SES.mode==="exam";
+  const msg=exam?"¿Salir del examen? No se calificará, pero tus errores quedan guardados.":summary?"¿Terminar la práctica y ver el resumen?":"¿Salir de la práctica? Lo que ya respondiste queda guardado.";
+  box.innerHTML=`<div class="card stack" style="border-color:var(--bad)"><b>${msg}</b><div class="row"><button class="btn primary" type="button" id="q-yes">${!exam&&summary?"Ver resumen":"Sí, salir"}</button><button class="btn" type="button" id="q-no">Seguir</button></div></div>`;
+  box.scrollIntoView({block:"nearest",behavior:"smooth"});
+  $("#q-yes").onclick=()=>{ if(!exam&&summary) return finishPractice(); SES.done=true; go(target||"bank",{force:true}); };
+  $("#q-no").onclick=()=>{box.innerHTML="";};
+}
+function missList(b,items){
+  const miss=items.filter(x=>x.pick!==null&&x.pick!==x.ci);
+  if(!miss.length) return `<div class="card empty">No fallaste ninguna pregunta.</div>`;
+  return `<div class="miss">${miss.map(it=>{const q=qById(b,it.id);return `<article class="mi">
+    <div class="chips"><span class="chip">${esc(q.tema)}</span>${q.concepto?`<span class="chip">${esc(q.concepto)}</span>`:""}</div>
+    <div class="q">${esc(q.pregunta)}</div>
+    <dl class="kv"><dt>Tu respuesta</dt><dd class="bad">${esc(it.opts[it.pick])}</dd><dt>Respuesta correcta</dt><dd class="good">${esc(it.opts[it.ci])}</dd></dl>
+    ${q.explicacion?`<div class="exp">${esc(q.explicacion)}</div>`:""}</article>`}).join("")}</div>`;
+}
+function temaBars(by){return `<div class="tbars">${Object.entries(by).filter(([,v])=>v.t).map(([t,v])=>{const p=Math.round(v.c/v.t*100);return `<div class="tb"><span title="${esc(t)}">${esc(t)}</span><div class="bar"><i style="width:${p}%"></i></div><span class="pct num">${p}%</span></div>`}).join("")}</div>`;}
+function vResults(){
+  const b=curBank(),s=SES,n=s.items.length;
+  if(!n) return `<section class="hero"><h2>Práctica terminada</h2><p>No respondiste ninguna pregunta.</p></section><div class="row"><button class="btn primary" type="button" data-go="bank">Volver al banco</button></div>`;
+  const c=s.items.filter(x=>x.pick===x.ci).length,score=Math.round(c/n*100),[vt,vc]=verdict(score);
+  const by={};for(const it of s.items){if(it.pick===null)continue;const t=qById(b,it.id).tema;by[t]=by[t]||{c:0,t:0};by[t].t++;if(it.pick===it.ci)by[t].c++;}
+  const missIds=s.items.filter(x=>x.pick!==null&&x.pick!==x.ci).map(x=>x.id), skipped=s.items.filter(x=>x.pick===null).length, exam=s.mode==="exam";
+  const lives=exam?(s.gameOver?`<div class="over"><b>Te quedaste sin vidas en la pregunta ${s.lostAt+1} de ${n}.</b> Las ${skipped} preguntas que no alcanzaste a responder cuentan como incorrectas.</div>`:`<div class="counts"><span>Terminaste con <b>${s.lives}</b> de ${MAXLIVES} vidas</span></div>`):"";
+  return `
+  <section class="hero" style="gap:14px"><div class="eyebrow">${exam?"Calificación":"Resumen de "+(s.mode==="review"?"repaso":"práctica")}</div>
+    <div class="score"><div class="big num">${score}<small> / 100</small></div><span class="verdict ${vc}">${vt}</span></div>
+    <div class="counts"><span><b>${c}</b> correctas</span><span><b>${missIds.length}</b> incorrectas</span>${skipped?`<span><b>${skipped}</b> sin responder</span>`:""}<span class="muted">${n} preguntas</span></div>${lives}</section>
+  <div class="stack">
+    ${Object.keys(by).length>1?`<div class="card stack"><h3>Resultado por tema</h3>${temaBars(by)}</div>`:""}
+    <div class="row">${missIds.length?`<button class="btn primary" type="button" data-rev="${missIds.join(",")}">Repasar errores (${missIds.length})</button>`:""}
+      <button class="btn" type="button" data-act="again">${exam?"Hacer otro examen":"Practicar de nuevo"}</button><button class="btn ghost" type="button" data-go="bank">Volver al banco</button></div>
+    <h2 style="margin-top:12px">Preguntas que fallaste</h2>${missList(b,s.items)}
+  </div>`;
+}
+function vErrors(){
+  const b=curBank();
+  const list=Object.entries(b.stats.errors).filter(([id])=>qById(b,id)).sort((a,c)=>(a[1].resolved-c[1].resolved)||(c[1].count-a[1].count));
+  const head=`<section class="hero"><div class="eyebrow">${esc(b.materia)}</div><h1 style="font-size:38px">Mis errores</h1><p>Ordenados por las veces que los has fallado. Se marcan como corregidos cuando después los contestas bien.</p></section>`;
+  if(!list.length) return head+`<div class="card empty">Todavía no tienes errores guardados en este banco.</div><div class="row" style="margin-top:16px"><button class="btn" type="button" data-go="bank">Volver al banco</button></div>`;
+  return head+`<div class="stack"><div class="row"><button class="btn primary" type="button" data-act="review-errors">Practicar mis errores</button><button class="btn ghost" type="button" data-go="bank">Volver al banco</button></div>
+    <div class="miss">${list.map(([id,e])=>{const q=qById(b,id);return `<article class="mi">
+      <div class="row" style="gap:8px"><span class="chip">${esc(q.tema)}</span>${e.resolved?'<span class="chip g">Corregida</span>':""}<span class="chip b" style="margin-left:auto">${e.count} ${e.count===1?"vez":"veces"}</span></div>
+      <div class="q">${esc(q.pregunta)}</div>
+      <dl class="kv"><dt>Concepto</dt><dd>${esc(q.concepto||"—")}</dd><dt>Veces fallada</dt><dd class="num">${e.count}</dd><dt>Última respuesta errónea</dt><dd class="bad">${esc(e.last)}</dd><dt>Respuesta correcta</dt><dd class="good">${esc(q.correcta)}</dd></dl></article>`}).join("")}</div></div>`;
+}
+function vStats(){
+  const b=curBank(),ex=b.stats.exams;
+  const avg=ex.length?Math.round(ex.reduce((a,x)=>a+x.score,0)/ex.length):null,best=ex.length?Math.max(...ex.map(x=>x.score)):null;
+  const wrong={};for(const [id,e] of Object.entries(b.stats.errors)){const q=qById(b,id);if(q)wrong[q.tema]=(wrong[q.tema]||0)+e.count;}
+  const worst=Object.entries(wrong).sort((a,c)=>c[1]-a[1])[0],total=Object.values(wrong).reduce((a,x)=>a+x,0);
+  return `
+  <section class="hero"><div class="eyebrow">${esc(b.materia)}</div><h1 style="font-size:38px">Estadísticas</h1><p>Los porcentajes por tema incluyen exámenes y prácticas. Se guardan en este navegador.</p></section>
+  <div class="stack">
+    <div class="tiles"><div class="tile"><div class="v">${ex.length}</div><div class="k">Exámenes realizados</div></div><div class="tile"><div class="v">${avg??"—"}</div><div class="k">Promedio</div></div><div class="tile"><div class="v">${best??"—"}</div><div class="k">Mejor calificación</div></div></div>
+    <div class="card stack"><h3>Porcentaje de aciertos por tema</h3>${Object.values(b.stats.tema).some(v=>v.t)?temaBars(b.stats.tema):'<p class="muted small">Aún no hay respuestas registradas.</p>'}</div>
+    ${worst?`<div class="focus"><div class="eyebrow">Tema que más necesitas repasar</div><h2 style="margin-top:4px">${esc(worst[0])}</h2><p class="muted" style="margin-top:6px">${worst[1]} de tus ${total} respuestas incorrectas son de este tema.</p></div>`:`<div class="card muted">Cuando tengas respuestas incorrectas, aquí verás el tema que más necesitas repasar.</div>`}
+    ${ex.length?`<div class="card"><h3 style="margin-bottom:8px">Últimos exámenes</h3><div class="scroll"><table class="hist"><thead><tr><th>Fecha</th><th>Preguntas</th><th>Correctas</th><th class="r">Calificación</th></tr></thead><tbody>${ex.slice(-10).reverse().map(x=>`<tr><td>${new Date(x.ts).toLocaleDateString("es-MX",{day:"numeric",month:"short",hour:"2-digit",minute:"2-digit"})}</td><td class="num">${x.n}</td><td class="num">${x.c}</td><td class="r num"><b>${x.score}</b></td></tr>`).join("")}</tbody></table></div></div>`:""}
+    <div class="row" id="s-reset"><button class="btn ghost" type="button" data-go="bank">Volver al banco</button><button class="btn ghost danger" type="button" data-act="s-reset">Borrar estadísticas y errores</button></div>
+  </div>`;
+}
+function vHelp(){
+  return `
+  <section class="hero"><div class="eyebrow">Ayuda</div><h1 style="font-size:38px">Cómo funciona</h1></section>
+  <div class="stack">
+    <div class="card stack-s"><h3>¿Qué es un banco de preguntas?</h3><p>Es un archivo .json con las preguntas, sus respuestas y explicaciones de una materia. Lo puedes crear tú o te lo puede mandar alguien. Desde cada banco puedes usar «Compartir banco» para descargarlo y enviarlo por WhatsApp, correo o Drive.</p></div>
+    <div class="card stack-s"><h3>Las 4 maneras de conseguir preguntas</h3>
+      <ol style="margin:0;padding-left:20px;display:flex;flex-direction:column;gap:6px">
+        <li><b>Cargar un banco compartido:</b> sin IA, al instante.</li>
+        <li><b>Crear con tu IA (copiar y pegar):</b> la mejor calidad, con cualquier IA y gratis. Requiere unos pasos manuales.</li>
+        <li><b>Conectar tu IA con clave:</b> automático. Necesitas una clave gratuita de Gemini u OpenRouter.</li>
+        <li><b>Crear desde PDF sin IA:</b> básico. Solo preguntas de memoria y no lee imágenes ni tablas.</li>
+      </ol></div>
+    <div class="card stack-s"><h3>Verificación de preguntas</h3><p>Cada pregunta hecha con IA trae la frase del PDF que la respalda. Si cargas tus PDF, la app busca esa frase en el texto: si la encuentra, la marca como verificada; si no, te avisa para que la revises. Las frases que vienen de imágenes no se pueden verificar.</p></div>
+    <div class="card stack-s"><h3>Privacidad</h3><p>Todo se guarda en este navegador: tus bancos, tus errores y tu clave (si eliges recordarla). Los PDF solo salen de tu equipo si usas la opción 3, y van directo a la IA que elegiste. Si borras los datos del navegador, se pierde tu progreso, así que exporta tus bancos de vez en cuando.</p></div>
+    <div class="card stack-s"><h3>Internet</h3><p>Estudiar y cargar bancos funciona sin internet. Leer PDF (opciones 2, 3 y 4) necesita internet la primera vez para descargar el lector de PDF.</p></div>
+  </div>`;
+}
+
+/* =========================================================
+   ACCIONES DE CREACIÓN
+   ========================================================= */
+async function addPdfs(key,files){
+  docsCache[key]=docsCache[key]||[];
+  const list=[...files].filter(f=>/\.pdf$/i.test(f.name)||f.type==="application/pdf");
+  if(!list.length){toast("Elige archivos PDF.");return;}
+  for(const f of list){
+    toast("Leyendo "+f.name+"…");
+    try{ docsCache[key].push(await readPdf(f)); }
+    catch(e){ toast(e.message||("No se pudo leer "+f.name)); }
+  }
+  render();
+}
+async function importFiles(files,id){
+  let text="";
+  for(const f of files){ try{ text+="\n"+await readText(f); }catch(e){} }
+  importText(text,id);
+}
+function importText(text,id){
+  const r=parseBank(text);
+  if(!r.preguntas.length){
+    CREATE.importMsg=`<b>No encontré preguntas en ese ${text.length>40?"texto":"archivo"}.</b> Revisa que copiaste la respuesta completa de la IA (incluidas las llaves { }). Si la IA respondió con texto normal en lugar del formato, pídele: «Entrégalo en el formato JSON que indican las instrucciones».`;
+    render(); return;
+  }
+  const docs=id==="c2"?(docsCache.copy||[]):[];
+  verify(r.preguntas,docs);
+  DRAFT={materia:r.materia||CREATE.cfg2?.materia||"",temas:r.temas,preguntas:r.preguntas,descartadas:r.descartadas,src:id};
+  CREATE.importMsg="";CREATE.pasteText="";FILTER="all";go("review");
+}
+let ABORT=null;
+async function runKey(){
+  const c=CREATE.cfg3; readCfg("c3",c); Object.assign(c,aiCfg());
+  const docs=docsCache.key||[];
+  const prog=html=>{CREATE.progHtml=html;const el=$("#k-prog");if(el)el.innerHTML=html;};
+  if(c.provider!=="custom"&&!c.key) return prog(`<p class="note w">Primero configura tu IA. <button class="link" type="button" data-act="to-settings">Configurar mi IA</button></p>`);
+  if(!docs.length) return prog(`<p class="note w">Elige al menos un PDF.</p>`);
+  if(c.provider==="gemini"&&c.sendPdf){ for(const d of docs) if(!d.b64) d.b64=await readB64(d.file); const size=docs.reduce((a,d)=>a+d.b64.length,0); if(size>18e6){ c.sendPdf=false; toast("Los PDF son muy pesados; se enviará solo su texto."); } }
+  const total=c.n, per=c.provider==="gemini"?25:20; const all=[]; let meta={materia:"",temas:[]}; let batchN=0, fails=0;
+  CREATE.busy=true; ABORT=false; render();
+  try{
+    while(all.length<total && !ABORT){
+      batchN++; const want=Math.min(per,total-all.length);
+      prog(`<p><b>Generando lote ${batchN}…</b> ${all.length} de ${total} preguntas listas.</p><div class="bar"><i style="width:${Math.round(all.length/total*100)}%"></i></div><p class="small muted">No cierres esta página.</p>`);
+      const prompt=buildPrompt(c,{api:true,batch:want,avoid:all.map(q=>q.pregunta)});
+      let out; try{ out=await callAI(c,prompt,docs); }catch(e){ if(e.kind==="empty"&&fails<2){fails++;batchN--;continue;} throw e; }
+      const r=parseBank(out);
+      if(!r.preguntas.length){ fails++; if(fails>2) throw new ApiError("format","La IA no respondió en el formato esperado. Prueba con otro modelo o usa la opción 2."); batchN--; continue; }
+      meta.materia=meta.materia||r.materia; r.temas.forEach(t=>!meta.temas.includes(t)&&meta.temas.push(t));
+      const seen=new Set(all.map(q=>normTxt(q.pregunta)));
+      r.preguntas.forEach(q=>{ if(!seen.has(normTxt(q.pregunta))) all.push(q); });
+    }
+  }catch(e){
+    CREATE.busy=false;
+    const tip=e.kind==="net"&&EMBEDDED?`<br><br>${EMBED_MSG}`:e.kind==="net"?`<br><br><b>Qué hacer:</b> usa la <button class="link" type="button" data-go="c-copy">opción 2 (copiar y pegar)</button>; funciona con la misma IA sin conexión directa.`:"";
+    if(all.length){ prog(`<p class="note w">${esc(e.message)}<br>Se generaron ${all.length} preguntas antes del error; puedes revisarlas.</p>`); }
+    else { render(); prog(`<p class="note b">${esc(e.message)}${tip}</p>`); return; }
+    toast(e.message);
+  }
+  CREATE.busy=false;
+  if(!all.length){ render(); return; }
+  verify(all,docs);
+  all.forEach(q=>q.origen="ia");
+  DRAFT={materia:c.materia||meta.materia,temas:meta.temas.length?meta.temas:[...new Set(all.map(q=>q.tema))],preguntas:all.slice(0,total),descartadas:[]};
+  CREATE.progHtml=""; FILTER="all"; go("review");
+}
+function runAlgo(){
+  const docs=docsCache.algo||[]; const c=CREATE.cfg4; c.materia=($("#c4-materia")?.value||"").trim();
+  const cs=ALGO.cards(docs.map(d=>({name:d.name,pages:d.pages})));
+  const qs=ALGO.questions(cs).map(q=>({...q,id:uid(),verif:"ok"}));
+  if(!qs.length){
+    const low=docs.some(d=>d.lowText);
+    CREATE.algoMsg=low?"No encontré texto suficiente. Tus PDF parecen escaneados o hechos de imágenes; este método no puede leerlos. Usa la opción 2 o 3.":"No encontré títulos con su definición en estos PDF. Usa la opción 2: la IA sí puede entender este material.";
+    render(); return;
+  }
+  DRAFT={materia:c.materia||docs[0].name,temas:docs.map(d=>d.name),preguntas:qs,descartadas:[],algo:{cards:cs.length,docs:docs.length}};
+  CREATE.algoMsg=""; FILTER="all"; go("review");
+}
+function saveDraft(){
+  const d=DRAFT; const keep=d.preguntas.filter(q=>!q._off).map(q=>{const {_off,...r}=q;return r;});
+  if(d.bankId&&S.banks[d.bankId]){
+    const b=S.banks[d.bankId];
+    const offIds=new Set(d.preguntas.filter(q=>q._off).map(q=>q.id));
+    b.preguntas=d.preguntas.map(q=>{const {_off,...r}=q; return {...r,dudosa:offIds.has(q.id)};});
+    b.temas=[...new Set([...b.temas,...b.preguntas.map(q=>q.tema)])].filter(t=>b.preguntas.some(q=>q.tema===t));
+    if(save()){ BANK=b.id; DRAFT=null; toast("Cambios guardados"); go("bank"); }
+    return;
+  }
+  const materia=($("#r-materia")?.value||d.materia||"Mi banco").trim(), target=$("#r-target")?.value;
+  let b;
+  if(target&&S.banks[target]){
+    b=S.banks[target]; const seen=new Set(b.preguntas.map(q=>normTxt(q.pregunta)));
+    keep.forEach(q=>{ if(!seen.has(normTxt(q.pregunta))) b.preguntas.push(q); });
+  }else{
+    const id=uid(); const temas=[...new Set([...d.temas,...keep.map(q=>q.tema)])].filter(t=>keep.some(q=>q.tema===t));
+    b={id,materia,temas,preguntas:keep,creado:Date.now(),stats:newStats(temas),sel:[]};
+    S.banks[id]=b; S.order.unshift(id);
+  }
+  b.temas=[...new Set([...b.temas,...b.preguntas.map(q=>q.tema)])];
+  b.temas.forEach(t=>{ b.stats.tema[t]=b.stats.tema[t]||{c:0,t:0}; });
+  if(save()){ BANK=b.id; DRAFT=null; toast("Banco guardado"); go("bank"); }
+}
+function exportBank(b){
+  const data={formato:FORMAT,materia:b.materia,temas:b.temas,preguntas:b.preguntas.filter(q=>!q.dudosa).map(q=>({tema:q.tema,dificultad:["","facil","intermedia","dificil"][q.dificultad],tipo:q.tipo,concepto:q.concepto,pregunta:q.pregunta,correcta:q.correcta,incorrectas:q.incorrectas,explicacion:q.explicacion,fuente:q.fuente,pagina:q.pagina}))};
+  download(`banco-${slug(b.materia)}.json`,JSON.stringify(data,null,1));
+}
+
+/* =========================================================
+   RENDER Y EVENTOS
+   ========================================================= */
+function render(){
+  const v={home:vHome,"c-import":vImport,"c-copy":vCopy,"c-key":vKey,"c-algo":vAlgo,create:()=>`<section class="hero"><div class="eyebrow">Crear banco</div><h1 style="font-size:38px">¿Cómo quieres conseguir tus preguntas?</h1><p>Todas las opciones terminan en el mismo lugar: revisas las preguntas, las guardas y empiezas a estudiar.</p></section>${waysHtml()}`,
+    settings:vSettings,review:vReview,bank:vBank,quiz:vQuiz,results:vResults,errors:vErrors,stats:vStats,help:vHelp}[VIEW]||vHome;
+  $("#app").innerHTML=v();
+  document.querySelectorAll(".nav button").forEach(b=>b.classList.toggle("on",b.dataset.go===VIEW||(b.dataset.go==="create"&&VIEW.startsWith("c-"))||(b.dataset.go==="home"&&["bank","errors","stats"].includes(VIEW))));
+}
+function syncForms(){ // guarda lo escrito antes de re-renderizar
+  if(VIEW==="c-copy"&&CREATE.cfg2&&$("#c2-materia")) readCfg("c2",CREATE.cfg2);
+  if(VIEW==="c-key"&&CREATE.cfg3&&$("#c3-materia")) readCfg("c3",CREATE.cfg3);
+  if(VIEW==="settings") readSet();
+  if(VIEW==="c-algo"&&CREATE.cfg4&&$("#c4-materia")) CREATE.cfg4.materia=$("#c4-materia").value;
+  const pt=document.querySelector("textarea[id$='-paste']"); if(pt){CREATE.pasteText=pt.value;CREATE.pasteOpen=pt.closest("details").open;}
+}
+
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button,[data-go]"); if(!t) return;
+  if(t.tagName==="LABEL") return;
+  const d=t.dataset;
+  if(d.go){ e.preventDefault(); syncForms(); return go(d.go); }
+  if(d.open){ BANK=d.open; return go("bank"); }
+  if(d.exam) return startExam(+d.exam);
+  if(d.opt!==undefined) return choose(+d.opt);
+  if(d.rev) return startReview(d.rev.split(","));
+  if(d.filter){ FILTER=d.filter; return render(); }
+  if(d.edit){ EDIT=d.edit; return render(); }
+  if(d.toggle){ const q=DRAFT.preguntas.find(x=>x.id===d.toggle); q._off=!q._off; return render(); }
+  if(d.rmdoc){ const [k,i]=d.rmdoc.split(":"); syncForms(); docsCache[k].splice(+i,1); e.preventDefault(); return render(); }
+  const b=curBank();
+  switch(d.act){
+    case "practice": return startPractice();
+    case "review-errors": return startReview();
+    case "next": return next();
+    case "quit": return SES.mode==="exam"?askQuit("bank"):askQuit("results",true);
+    case "again": return SES.mode==="exam"?startExam(SES.n):SES.mode==="review"?startReview():startPractice();
+    case "flag": { const q=qById(b,SES.items[SES.i].id); q.dudosa=true; save(); toast("Marcada como dudosa. Ya no aparecerá; puedes restaurarla en «Editar preguntas»."); t.remove(); return; }
+    case "b-export": return exportBank(b);
+    case "b-edit": DRAFT={bankId:b.id,materia:b.materia,temas:b.temas,preguntas:b.preguntas.map(q=>({...q,_off:!!q.dudosa}))}; FILTER="all"; return go("review");
+    case "b-del": $("#b-confirm").innerHTML=`<div class="card stack" style="border-color:var(--bad)"><b>¿Eliminar «${esc(b.materia)}»? Se borran sus preguntas, errores y estadísticas de este navegador.</b><div class="row"><button class="btn danger" type="button" data-act="b-del-yes">Sí, eliminar</button><button class="btn" type="button" data-act="b-del-no">Cancelar</button></div></div>`; return;
+    case "b-del-yes": delete S.banks[b.id]; S.order=S.order.filter(x=>x!==b.id); BANK=null; save(); toast("Banco eliminado"); return go("home");
+    case "b-del-no": $("#b-confirm").innerHTML=""; return;
+    case "s-reset": $("#s-reset").innerHTML=`<span>¿Seguro? Se borran exámenes, porcentajes y errores de este banco.</span><button class="btn danger" type="button" data-act="s-reset-yes">Sí, borrar</button><button class="btn ghost" type="button" data-go="stats">Cancelar</button>`; return;
+    case "s-reset-yes": b.stats=newStats(b.temas); save(); return render();
+    case "imp-parse": case "c2-parse": { syncForms(); const id=d.act.split("-")[0]; return importText($("#"+id+"-paste").value,id); }
+    case "c2-dl": readCfg("c2",CREATE.cfg2); return download(`instrucciones-${slug(CREATE.cfg2.materia||"banco")}.txt`,buildPrompt(CREATE.cfg2),"text/plain");
+    case "c2-copy": readCfg("c2",CREATE.cfg2); return copy(buildPrompt(CREATE.cfg2));
+    case "c2-copymsg": return copy("Te adjunto mis PDF de estudio y un archivo de instrucciones. Sigue las instrucciones del archivo al pie de la letra.");
+    case "k-run": return runKey();
+    case "k-stop": ABORT=true; toast("Se detendrá al terminar el lote actual."); return;
+    case "to-settings": syncForms(); CREATE.backTo="c-key"; SET=null; return go("settings");
+    case "s-test": return testKey();
+    case "s-save": return saveSettings();
+    case "s-forget": { const p=SET.provider; delete S.ai.keys[p]; delete SESSION_KEYS[p]; delete S.ai.verified[p]; SET.keys[p]=""; SET.test[p]=null; save(); toast("Clave borrada"); return render(); }
+    case "a-run": return runAlgo();
+    case "r-offno": DRAFT.preguntas.forEach(q=>{if(q.verif==="no")q._off=true;}); return render();
+    case "r-save": return saveDraft();
+    case "r-cancel": { const back=DRAFT?.bankId?"bank":"create"; DRAFT=null; return go(back); }
+    case "e-cancel": EDIT=null; return render();
+    case "e-save": { const q=DRAFT.preguntas.find(x=>x.id===EDIT);
+      const inc=[0,1,2].map(i=>$("#e-inc"+i).value.trim()).filter(Boolean);
+      const corr=$("#e-corr").value.trim(), preg=$("#e-preg").value.trim();
+      if(!preg||!corr||(!/^(Verdadero|Falso)$/.test(corr)&&inc.length<2)){ toast("La pregunta necesita texto, respuesta correcta y al menos 2 incorrectas."); return; }
+      Object.assign(q,{pregunta:preg,correcta:corr,incorrectas:inc,explicacion:$("#e-exp").value.trim(),tema:$("#e-tema").value.trim()||q.tema,dificultad:+$("#e-dif").value});
+      if(!DRAFT.temas.includes(q.tema)) DRAFT.temas.push(q.tema);
+      EDIT=null; return render(); }
+  }
+});
+document.addEventListener("change",async e=>{
+  const el=e.target;
+  if(el.id==="t-all"||el.dataset.tema!==undefined){
+    const b=curBank(); let sel=b.sel&&b.sel.length?[...b.sel]:[...b.temas];
+    if(el.id==="t-all") sel=el.checked?[...b.temas]:[];
+    else { const t=b.temas[+el.dataset.tema]; sel=el.checked?[...new Set([...sel,t])]:sel.filter(x=>x!==t); }
+    b.sel=sel.length?sel:["__ninguno__"]; save(); render(); return;
+  }
+  if(el.id==="s-provider"){ readSet(); SET.provider=el.value; render(); return; }
+  if(el.id==="s-key"&&SET){ SET.test[SET.provider]=null; delete S.ai.verified[SET.provider]; }
+  if(el.type==="file"){
+    const id=el.id.replace(/-input$|-file$/,"");
+    syncForms();
+    if(el.id.endsWith("-file")) await importFiles([...el.files],id);
+    else await addPdfs(id,el.files);
+    el.value="";
+  }
+  if(["c2-materia","c2-n","c2-temas","c2-prio"].includes(el.id)){ readCfg("c2",CREATE.cfg2); const p=$("#c2-preview"); if(p) p.textContent=buildPrompt(CREATE.cfg2); }
+});
+// arrastrar y soltar
+document.addEventListener("dragover",e=>{const d=e.target.closest(".drop");if(d){e.preventDefault();d.classList.add("over");}});
+document.addEventListener("dragleave",e=>{const d=e.target.closest(".drop");if(d)d.classList.remove("over");});
+document.addEventListener("drop",async e=>{
+  const d=e.target.closest(".drop"); if(!d) return; e.preventDefault(); d.classList.remove("over");
+  const input=d.querySelector("input[type=file]"); const files=[...e.dataTransfer.files]; syncForms();
+  if(input.id.endsWith("-file")) await importFiles(files,input.id.replace(/-file$/,""));
+  else await addPdfs(input.id.replace(/-input$/,""),files);
+});
+document.addEventListener("keydown",e=>{
+  if(VIEW!=="quiz"||!SES||e.target.closest("input,textarea,select")) return;
+  const idx=L.indexOf(e.key.toUpperCase()); const it=SES.items[SES.i];
+  if(idx>=0&&idx<it.opts.length){e.preventDefault();choose(idx);}
+  else if(e.key==="Enter"&&SES.answered){e.preventDefault();next();}
+});
+render();
+</script>
+</body>
+</html>
